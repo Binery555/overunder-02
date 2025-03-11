@@ -1,226 +1,116 @@
 <!DOCTYPE html>
-<html lang="en" >
-<head>
-  <meta charset="UTF-8">
-  <title>Untitled</title>
-  
-
-</head>
-<body>
-<!-- partial:index.partial.html -->
-<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart Trader - Live Market Data</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      background-color: #ffffff;
-      color: #000000;
-      margin: 0;
-      padding: 0;
-    }
-    .container {
-      padding: 20px;
-    }
-    .market-title {
-      font-size: 24px;
-      margin-bottom: 10px;
-    }
-    .live-price {
-      font-size: 36px;
-      font-weight: bold;
-      color: #1d3557;
-      margin-bottom: 20px;
-    }
-    .status {
-      font-size: 16px;
-      color: #e76f51;
-    }
-    .market {
-      margin-top: 20px;
-    }
-    .market .market-name {
-      font-size: 20px;
-      margin-bottom: 10px;
-    }
-    .market-buttons {
-      margin-top: 20px;
-    }
-    .market-buttons button {
-      margin: 5px;
-      padding: 10px 20px;
-      font-size: 16px;
-      background-color: #1d3557;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    .market-buttons button:hover {
-      background-color: #457b9d;
-    }
-    .number-plate {
-      display: flex;
-      justify-content: center;
-      margin-top: 20px;
-    }
-    .number {
-      padding: 10px;
-      margin: 5px;
-      border: 1px solid #ccc;
-      background-color: #f1f1f1;
-      color: #1d3557;
-      font-size: 24px;
-      width: 40px;
-      text-align: center;
-    }
-    .highlight {
-      background-color: #1d3557;
-      color: white;
-      border: 2px solid #457b9d;
-    }
-    .signal {
-      margin-top: 20px;
-      font-size: 20px;
-      color: white;
-      background-color: #2a9d8f;
-      padding: 10px;
-      display: inline-block;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deriv Auto Bot</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background: #f5f5f5; }
+        h1 { color: #333; }
+        button { padding: 10px 20px; margin: 10px; border: none; cursor: pointer; }
+        .start { background: green; color: #fff; }
+        .stop { background: red; color: #fff; }
+        #log { margin-top: 20px; white-space: pre-wrap; text-align: left; background: #fff; padding: 10px; border: 1px solid #ccc; }
+        .balance-container { display: flex; align-items: center; justify-content: center; margin: 20px 0; }
+        .balance-icon { font-size: 24px; margin-right: 10px; }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Smart Trader - Live Market Data</h1>
-
-    <div class="market">
-      <div class="market-name" id="marketName">Select a Volatility Index</div>
-      <div class="live-price" id="livePrice">Loading...</div>
+    <h1>Deriv Auto Bot Trading</h1>
+    
+    <div class="balance-container">
+        <span class="balance-icon">💰</span>
+        <span id="balance">Balance: $10.00</span>
     </div>
 
-    <div class="market-buttons">
-      <button onclick="subscribeToMarket('R_10', 'Volatility 10 Index')">Volatility 10</button>
-      <button onclick="subscribeToMarket('R_25', 'Volatility 25 Index')">Volatility 25</button>
-      <button onclick="subscribeToMarket('R_50', 'Volatility 50 Index')">Volatility 50</button>
-      <button onclick="subscribeToMarket('R_75', 'Volatility 75 Index')">Volatility 75</button>
-      <button onclick="subscribeToMarket('R_100', 'Volatility 100 Index')">Volatility 100</button>
-    </div>
+    <button class="start" onclick="startBot()">Start Bot</button>
+    <button class="stop" onclick="stopBot()">Stop Bot</button>
 
-    <div class="status" id="status">Result still processing...</div>
+    <h2>Log:</h2>
+    <div id="log"></div>
 
-    <div class="number-plate" id="numberPlate">
-      <div class="number">0</div>
-      <div class="number">1</div>
-      <div class="number">2</div>
-      <div class="number">3</div>
-      <div class="number">4</div>
-      <div class="number">5</div>
-      <div class="number">6</div>
-      <div class="number">7</div>
-      <div class="number">8</div>
-      <div class="number">9</div>
-    </div>
-
-    <div class="signal" id="signalResult" style="display: none;">Under purchase</div>
-  </div>
-
-  <script>
-    const DERIV_API_TOKEN = 'your_api_token_here';
-    const ws = new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=1089');
-    const statusElement = document.getElementById('status');
-    const priceElement = document.getElementById('livePrice');
-    const marketNameElement = document.getElementById('marketName');
-    const numberPlate = document.getElementById('numberPlate').children;
-    const signalResult = document.getElementById('signalResult');
-
-    let currentMarket = null;
-    let recentNumbers = [];
-
-    ws.onopen = () => {
-      statusElement.textContent = 'Connected to Deriv API. Fetching data...';
-    };
-
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-
-      if (data.error) {
-        statusElement.textContent = `Error: ${data.error.message}`;
-        return;
-      }
-
-      if (data.tick) {
-        const market = data.tick.symbol;
-        const price = data.tick.quote;
-
-        if (market === currentMarket) {
-          priceElement.textContent = price;
-          statusElement.textContent = 'Live data updated.';
-
-          const lastDigit = parseInt(price.toString().split('.').pop().slice(-1));
-
-          recentNumbers.push(lastDigit);
-          if (recentNumbers.length > 6) recentNumbers.shift();
-
-          Array.from(numberPlate).forEach((el, index) => {
-            el.classList.toggle('highlight', index === lastDigit);
-          });
-
-          // Signal condition based on last digits
-          if (recentNumbers.slice(-5).every(num => num >= 4 && num <= 9)) {
-            signalResult.style.display = 'inline-block';
-            signalResult.textContent = 'Under purchase';
-            playSound();  // Play sound when signal is received
-          } else if (recentNumbers.slice(-6).every(num => num >= 1 && num <= 5)) {
-            signalResult.style.display = 'inline-block';
-            signalResult.textContent = 'Under purchase';
-            playSound();  // Play sound when signal is received
-          } else {
-            signalResult.style.display = 'none';  // Hide signal if no match
-          }
+    <script>
+        let socket;
+        const apiToken = "Je5KwLgHrMOuIya"; // Be careful! Use server-side for security.
+        const appID = "69657"; // Replace with your Deriv app ID
+        let isBotRunning = false;
+        
+        function logMessage(message) {
+            const logDiv = document.getElementById("log");
+            logDiv.innerHTML += message + '\n';
+            logDiv.scrollTop = logDiv.scrollHeight;
         }
-      }
-    };
 
-    ws.onerror = (error) => {
-      statusElement.textContent = `Connection error: ${error.message}`;
-    };
+        function startBot() {
+            if (isBotRunning) {
+                logMessage("Bot is already running...");
+                return;
+            }
+            isBotRunning = true;
+            
+            socket = new WebSocket(`wss://ws.binaryws.com/websockets/v3?app_id=${69657}`);
+            
+            socket.onopen = function () {
+                logMessage("Connected to Deriv API");
+                socket.send(JSON.stringify({ authorize: apiToken }));
+            };
 
-    ws.onclose = () => {
-      statusElement.textContent = 'Connection closed. Reconnecting...';
-    };
+            socket.onmessage = function (event) {
+                const data = JSON.parse(event.data);
+                if (data.error) {
+                    logMessage("Error: " + data.error.message);
+                    stopBot();
+                } else if (data.authorize) {
+                    logMessage("Authorization successful!");
+                    updateBalance(data.authorize.balance);
+                    placeTrade();
+                } else if (data.buy) {
+                    logMessage("Trade placed: " + JSON.stringify(data.buy));
+                } else if (data.tick) {
+                    logMessage("Tick price: " + data.tick.quote);
+                }
+            };
 
-    function subscribeToMarket(marketSymbol, marketName) {
-      currentMarket = marketSymbol;
-      marketNameElement.textContent = marketName;
+            socket.onerror = function (error) {
+                logMessage("WebSocket error: " + error.message);
+            };
 
-      ws.send(JSON.stringify({
-        ticks: marketSymbol,
-        subscribe: 1,
-        passthrough: { token: DERIV_API_TOKEN }
-      }));
+            socket.onclose = function () {
+                logMessage("Connection closed.");
+                isBotRunning = false;
+            };
+        }
 
-      priceElement.textContent = 'Loading...';
-      statusElement.textContent = 'Result still processing...';
-      signalResult.style.display = 'none';
-    }
+        function placeTrade() {
+            logMessage("Placing trade...");
+            
+            socket.send(JSON.stringify({
+                buy: 1,
+                price: 10, // Stake amount
+                parameters: {
+                    amount: 10,
+                    basis: "stake",
+                    contract_type: "CALL", // 'CALL' for rise, 'PUT' for fall
+                    currency: "USD",
+                    duration: 5,
+                    duration_unit: "t",
+                    symbol: "R_100" // Volatility 100 index
+                }
+            }));
+        }
 
-    // Function to play the sound effect
-    function playSound() {
-      var audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      var oscillator = audioContext.createOscillator();
-      oscillator.type = 'square';  // Square wave for tone
-      oscillator.frequency.setValueAtTime(220, audioContext.currentTime); // 220Hz (A3 note)
-      oscillator.connect(audioContext.destination);
-      oscillator.start();
-      oscillator.stop(audioContext.currentTime + 1);  // Sound lasts for 1 second
-    }
-  </script>
-</body>
-</html>
-<!-- partial -->
-  
+        function updateBalance(balance) {
+            const balanceElement = document.getElementById("balance");
+            balanceElement.innerText = `Balance: $${balance.toFixed(2)}`;
+        }
+
+        function stopBot() {
+            if (socket) {
+                socket.close();
+            }
+            isBotRunning = false;
+            logMessage("Bot stopped.");
+        }
+    </script>
 </body>
 </html>
