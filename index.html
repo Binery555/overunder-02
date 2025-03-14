@@ -3,171 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Deriv Auto Bot</title>
-    <style>
-        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background: #f5f5f5; }
-        h1 { color: #333; }
-        button { padding: 10px 20px; margin: 10px; border: none; cursor: pointer; }
-        .start { background: green; color: #fff; }
-        .stop { background: red; color: #fff; }
-        #log { margin-top: 20px; white-space: pre-wrap; text-align: left; background: #fff; padding: 10px; border: 1px solid #ccc; }
-        .balance-container { display: flex; align-items: center; justify-content: center; margin: 20px 0; }
-        .balance-icon { font-size: 24px; margin-right: 10px; }
-        select, input { padding: 10px; margin: 10px; }
-    </style>
+    <title>Deriv WebSocket Connection</title>
 </head>
 <body>
-    <h1>Deriv Auto Bot Trading</h1>
-    
-    <div class="balance-container">
-        <span class="balance-icon">💰</span>
-        <span id="balance">Balance: $0.00</span>
-    </div>
-
-    <div class="balance-container">
-        <span class="balance-icon">🎮</span>
-        <span id="demoBalance">Demo Balance: $0.00</span>
-    </div>
-
-    <div>
-        <select id="market">
-            <option value="R_10">Volatility 10</option>
-            <option value="R_25">Volatility 25</option>
-            <option value="R_50">Volatility 50</option>
-            <option value="R_75">Volatility 75</option>
-            <option value="R_100">Volatility 100</option>
-        </select>
-
-        <select id="tradeType">
-            <option value="CALL">Rise</option>
-            <option value="PUT">Fall</option>
-        </select>
-
-        <input type="number" id="stake" placeholder="Stake Amount" min="1" value="10">
-    </div>
-
-    <button class="start" onclick="startBot()">Start Bot</button>
-    <button class="stop" onclick="stopBot()">Stop Bot</button>
-
-    <h2>Log:</h2>
-    <div id="log"></div>
+    <h1>Deriv WebSocket Connection</h1>
+    <div id="status">Connecting...</div>
+    <div id="message"></div>
 
     <script>
-        let socket;
-        const apiToken = "Je5KwLgHrMOuIya"; 
-        const appID = "69657"; 
-        let isBotRunning = false;
-        let oauthToken = ""; // This will hold the OAuth token
+        const token = "Je5KwLgHrMOuIya";  // Your API token
+        const url = "wss://ws.binaryws.com/websockets/v3?app_id=1089";  // Deriv WebSocket URL
 
-        function logMessage(message) {
-            const logDiv = document.getElementById("log");
-            logDiv.innerHTML += message + '\n';
-            logDiv.scrollTop = logDiv.scrollHeight;
-        }
+        const socket = new WebSocket(url);
 
-        function startBot() {
-            if (isBotRunning) {
-                logMessage("Bot is already running...");
-                return;
-            }
-            isBotRunning = true;
+        // WebSocket connection open
+        socket.onopen = function() {
+            document.getElementById("status").textContent = "Connected to Deriv WebSocket";
             
-            socket = new WebSocket(`wss://ws.binaryws.com/websockets/v3?app_id=${appID}`);
-            
-            socket.onopen = function () {
-                logMessage("Connected to Deriv API");
-                socket.send(JSON.stringify({ authorize: oauthToken }));
+            // Send authorization request
+            const request = {
+                "authorize": token
             };
+            socket.send(JSON.stringify(request));
+        };
 
-            socket.onmessage = function (event) {
-                const data = JSON.parse(event.data);
-                if (data.error) {
-                    logMessage("Error: " + data.error.message);
-                    stopBot();
-                } else if (data.authorize) {
-                    logMessage("Authorization successful!");
-                    updateBalance(data.authorize.balance, data.authorize.currency, data.authorize.is_virtual);
-                    placeTrade();
-                } else if (data.buy) {
-                    logMessage("Trade placed: " + JSON.stringify(data.buy));
-                } else if (data.tick) {
-                    logMessage("Tick price: " + data.tick.quote);
-                }
-            };
+        // WebSocket message received
+        socket.onmessage = function(event) {
+            const response = JSON.parse(event.data);
+            document.getElementById("message").textContent = "Response: " + JSON.stringify(response);
+        };
 
-            socket.onerror = function (error) {
-                logMessage("WebSocket error: " + error.message);
-            };
+        // WebSocket connection closed
+        socket.onclose = function() {
+            document.getElementById("status").textContent = "Disconnected from Deriv WebSocket";
+        };
 
-            socket.onclose = function () {
-                logMessage("Connection closed.");
-                isBotRunning = false;
-            };
-        }
-
-        function placeTrade() {
-            const market = document.getElementById("market").value;
-            const tradeType = document.getElementById("tradeType").value;
-            const stake = parseFloat(document.getElementById("stake").value);
-            
-            logMessage(`Placing trade: ${tradeType} on ${market} with $${stake}`);
-            
-            socket.send(JSON.stringify({
-                buy: 1,
-                price: stake,
-                parameters: {
-                    amount: stake,
-                    basis: "stake",
-                    contract_type: tradeType,
-                    currency: "USD",
-                    duration: 5,
-                    duration_unit: "t",
-                    symbol: market
-                }
-            }));
-        }
-
-        function updateBalance(balance, currency, isDemo) {
-            if (isDemo) {
-                document.getElementById("demoBalance").innerText = `Demo Balance: ${currency} ${balance.toFixed(2)}`;
-            } else {
-                document.getElementById("balance").innerText = `Balance: ${currency} ${balance.toFixed(2)}`;
-            }
-        }
-
-        function stopBot() {
-            if (socket) {
-                socket.close();
-            }
-            isBotRunning = false;
-            logMessage("Bot stopped.");
-        }
-
-        // Simulate OAuth login by getting an OAuth token and updating the balance
-        function loginWithOAuth() {
-            // Normally you would redirect the user to an OAuth authorization page here.
-            oauthToken = "Je5KwLgHrMOuIya"; // Replace with actual token after OAuth flow
-
-            // Fetch the balance once the user is authenticated
-            fetch(`https://api.binary.com/v3/balance`, {
-                headers: {
-                    Authorization: `Bearer ${oauthToken}`
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data && data.balance) {
-                    updateBalance(data.balance, data.currency, data.is_virtual);
-                    logMessage("OAuth login successful!");
-                } else {
-                    logMessage("Failed to fetch balance");
-                }
-            })
-            .catch(error => logMessage("Error fetching balance: " + error));
-        }
-
-        // Simulate a login attempt
-        loginWithOAuth();
+        // WebSocket error
+        socket.onerror = function(error) {
+            document.getElementById("status").textContent = "WebSocket Error: " + error;
+        };
     </script>
 </body>
 </html>
