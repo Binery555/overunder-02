@@ -3,171 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trade Timer & Balance System</title>
+    <title>Deriv Balance Display</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px; }
-        .container { max-width: 800px; margin: 0 auto; padding: 20px; background: #fff; border-radius: 10px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); }
-        .input-box { margin-bottom: 15px; }
-        .input-box input { padding: 10px; width: 100%; }
-        .btn { padding: 10px 20px; margin: 10px 5px; background: red; color: #fff; border: none; border-radius: 5px; cursor: pointer; }
-        .btn:disabled { background: gray; cursor: not-allowed; }
-        .btn.active { background: yellow; }
-        .btn:hover:not(:disabled) { background: #0056b3; }
-        .timer { font-size: 1.5em; margin: 20px 0; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        table, th, td { border: 1px solid #ddd; }
-        th, td { padding: 10px; text-align: left; }
-        th { background-color: #007bff; color: #fff; }
-        .win { color: green; }
-        .loss { color: red; }
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 50px;
+        }
+        #balance {
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
+    <h1>Deriv Account Balance</h1>
+    <p id="balance">Balance: Loading...</p>
+    
+    <script>
+        const app_id = 69825; // Your App ID
+        let token = localStorage.getItem('deriv_token');
+        let ws = new WebSocket('wss://ws.deriv.com/websockets/v3');
 
-<div class="container">
-    <h2>Trade Management System</h2>
-
-    <div class="input-box">
-        <label>Balance:</label>
-        <input type="number" id="balance" value="1000" disabled>
-    </div>
-
-    <div class="input-box">
-        <label>Win Amount:</label>
-        <input type="number" id="winAmount" value="0">
-    </div>
-
-    <div class="input-box">
-        <label>Loss Amount:</label>
-        <input type="number" id="lossAmount" value="0">
-    </div>
-
-    <div class="timer" id="timer">Next Trade In: --:--</div>
-
-    <button class="btn" id="winBtn" onclick="recordWin()">Win</button>
-    <button class="btn" id="lossBtn" onclick="recordLoss()">Loss</button>
-    <button class="btn" onclick="resetTables()">Reset Tables</button>
-    <button class="btn" onclick="resetSystem()">Reset All</button>
-
-    <h3>Win Table</h3>
-    <table id="winTable">
-        <tr>
-            <th>#</th>
-            <th>Profit</th>
-        </tr>
-    </table>
-
-    <h3>Loss Table</h3>
-    <table id="lossTable">
-        <tr>
-            <th>#</th>
-            <th>Loss</th>
-        </tr>
-    </table>
-</div>
-
-<script>
-    let timerMinutes = 0;
-    let timerSeconds = 0;
-    let winCount = 0;
-    let lossCount = 0;
-    let timerInterval;
-    let isTimerRunning = false;
-
-    function updateTimerDisplay() {
-        const timerElement = document.getElementById('timer');
-        timerElement.innerText = timerMinutes > 0 || timerSeconds > 0 ? `Next Trade In: ${timerMinutes}:${timerSeconds.toString().padStart(2, '0')}` : "Next Trade In: --:--";
-    }
-
-    function startTimer() {
-        clearInterval(timerInterval);
-        isTimerRunning = true;
-        timerInterval = setInterval(() => {
-            if (timerMinutes === 0 && timerSeconds === 0) {
-                enableButtons();
-                clearInterval(timerInterval);
-                isTimerRunning = false;
-            } else {
-                if (timerSeconds === 0) {
-                    timerMinutes--;
-                    timerSeconds = 59;
-                } else {
-                    timerSeconds--;
-                }
+        ws.onopen = function() {
+            if (token) {
+                ws.send(JSON.stringify({ authorize: token }));
             }
-            updateTimerDisplay();
-        }, 1000);
-    }
+        };
 
-    function enableButtons() {
-        document.getElementById('winBtn').disabled = false;
-        document.getElementById('lossBtn').disabled = false;
-    }
+        ws.onmessage = function(event) {
+            const response = JSON.parse(event.data);
+            if (response.error) {
+                console.error('Error:', response.error.message);
+            } else if (response.msg_type === 'authorize') {
+                localStorage.setItem('deriv_token', response.authorize.token);
+                getBalance();
+            } else if (response.msg_type === 'balance') {
+                document.getElementById('balance').innerText = `Balance: ${response.balance.balance} ${response.balance.currency}`;
+            }
+        };
 
-    function disableButtons() {
-        document.getElementById('winBtn').disabled = true;
-        document.getElementById('lossBtn').disabled = true;
-    }
-
-    function recordWin() {
-        if (isTimerRunning) return;
-        const winAmount = parseFloat(document.getElementById('winAmount').value);
-        const balanceElement = document.getElementById('balance');
-        balanceElement.value = parseFloat(balanceElement.value) + winAmount;
-        winCount++;
-        addToTable('winTable', winCount, winAmount, 'win');
-        disableButtons();
-        document.getElementById('winBtn').classList.add('active');
-        timerMinutes = 2;
-        timerSeconds = 0;
-        startTimer();
-    }
-
-    function recordLoss() {
-        if (isTimerRunning) return;
-        const lossAmount = parseFloat(document.getElementById('lossAmount').value);
-        const balanceElement = document.getElementById('balance');
-        balanceElement.value = parseFloat(balanceElement.value) - lossAmount;
-        lossCount++;
-        addToTable('lossTable', lossCount, -lossAmount, 'loss');
-        disableButtons();
-        document.getElementById('lossBtn').classList.add('active');
-        timerMinutes = 5;
-        timerSeconds = 0;
-        startTimer();
-    }
-
-    function addToTable(tableId, count, amount, type) {
-        const table = document.getElementById(tableId);
-        const row = table.insertRow();
-        row.insertCell(0).innerText = count;
-        const cell = row.insertCell(1);
-        cell.innerText = amount.toFixed(2);
-        cell.className = type;
-    }
-
-    function resetTables() {
-        document.getElementById('winTable').innerHTML = '<tr><th>#</th><th>Profit</th></tr>';
-        document.getElementById('lossTable').innerHTML = '<tr><th>#</th><th>Loss</th></tr>';
-        winCount = 0;
-        lossCount = 0;
-    }
-
-    function resetSystem() {
-        resetTables();
-        clearInterval(timerInterval);
-        document.getElementById('balance').value = 1000;
-        document.getElementById('winAmount').value = 0;
-        document.getElementById('lossAmount').value = 0;
-        timerMinutes = 0;
-        timerSeconds = 0;
-        isTimerRunning = false;
-        enableButtons();
-        updateTimerDisplay();
-    }
-
-    updateTimerDisplay();
-</script>
-
+        function getBalance() {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ balance: 1 }));
+            }
+        }
+    </script>
 </body>
 </html>
