@@ -9,23 +9,92 @@
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
+            overflow: hidden;
         }
+
         .container {
             display: flex;
-            flex-direction: row;
             height: 100vh;
+            width: 100vw;
         }
+
+        .resizable {
+            display: flex;
+            flex-grow: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
         iframe {
-            width: 50%;
+            width: 100%;
             height: 100%;
-            border: none;
+            border: 3px solid transparent;
+            box-sizing: border-box;
+        }
+
+        iframe.active {
+            border: 3px solid black;
+        }
+
+        .divider {
+            width: 5px;
+            cursor: col-resize;
+            background-color: #ccc;
+            z-index: 10;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <iframe src="https://deriv.com/"></iframe>
-        <iframe src="https://derivesupanalyzer.site/"></iframe>
+        <div class="resizable" id="left-pane">
+            <iframe src="https://deriv.com/" id="iframe1"></iframe>
+        </div>
+        <div class="divider" id="divider"></div>
+        <div class="resizable" id="right-pane">
+            <iframe src="https://derivesupanalyzer.site/" id="iframe2"></iframe>
+        </div>
     </div>
+
+    <script>
+        // Handle iframe focus
+        const iframes = document.querySelectorAll("iframe");
+        iframes.forEach((iframe) => {
+            iframe.addEventListener("pointerdown", () => {
+                iframes.forEach(i => i.classList.remove("active"));
+                iframe.classList.add("active");
+            });
+        });
+
+        // Handle resize
+        const divider = document.getElementById("divider");
+        const leftPane = document.getElementById("left-pane");
+        const rightPane = document.getElementById("right-pane");
+
+        let isResizing = false;
+
+        divider.addEventListener("mousedown", (e) => {
+            isResizing = true;
+            document.body.style.cursor = "col-resize";
+        });
+
+        document.addEventListener("mousemove", (e) => {
+            if (!isResizing) return;
+
+            const containerOffsetLeft = document.querySelector('.container').offsetLeft;
+            const pointerRelativeX = e.clientX - containerOffsetLeft;
+            const containerWidth = document.querySelector('.container').offsetWidth;
+
+            const leftWidthPercent = (pointerRelativeX / containerWidth) * 100;
+            const rightWidthPercent = 100 - leftWidthPercent;
+
+            leftPane.style.width = `${leftWidthPercent}%`;
+            rightPane.style.width = `${rightWidthPercent}%`;
+        });
+
+        document.addEventListener("mouseup", () => {
+            isResizing = false;
+            document.body.style.cursor = "default";
+        });
+    </script>
 </body>
 </html>
