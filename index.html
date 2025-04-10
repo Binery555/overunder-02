@@ -3,52 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Deriv Balance Display</title>
+    <title>Two-Screen Browser</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            text-align: center;
-            margin: 50px;
+            margin: 0;
+            padding: 0;
         }
-        #balance {
-            font-size: 24px;
-            font-weight: bold;
-            margin-top: 20px;
+        .container {
+            display: flex;
+            flex-direction: row;
+            height: 100vh;
+        }
+        iframe {
+            width: 50%;
+            height: 100%;
+            border: none;
         }
     </style>
 </head>
 <body>
-    <h1>Deriv Account Balance</h1>
-    <p id="balance">Balance: Loading...</p>
-    
-    <script>
-        const app_id = 69825; // Your App ID
-        let token = localStorage.getItem('deriv_token');
-        let ws = new WebSocket('wss://ws.deriv.com/websockets/v3');
-
-        ws.onopen = function() {
-            if (token) {
-                ws.send(JSON.stringify({ authorize: token }));
-            }
-        };
-
-        ws.onmessage = function(event) {
-            const response = JSON.parse(event.data);
-            if (response.error) {
-                console.error('Error:', response.error.message);
-            } else if (response.msg_type === 'authorize') {
-                localStorage.setItem('deriv_token', response.authorize.token);
-                getBalance();
-            } else if (response.msg_type === 'balance') {
-                document.getElementById('balance').innerText = `Balance: ${response.balance.balance} ${response.balance.currency}`;
-            }
-        };
-
-        function getBalance() {
-            if (ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ balance: 1 }));
-            }
-        }
-    </script>
+    <div class="container">
+        <iframe src="https://deriv.com/"></iframe>
+        <iframe src="https://derivesupanalyzer.site/"></iframe>
+    </div>
 </body>
 </html>
