@@ -2,60 +2,141 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Email + IP Display</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login Interface</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+    }
+    .container {
+      max-width: 400px;
+      margin: 100px auto;
+      background: white;
+      padding: 20px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+    }
+    h2 {
+      text-align: center;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .form-group label {
+      font-size: 14px;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 10px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .form-group button {
+      width: 100%;
+      padding: 10px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .form-group button:hover {
+      background-color: #45a049;
+    }
+    .ip-display {
+      margin-top: 15px;
+      font-size: 14px;
+      color: #555;
+    }
+  </style>
 </head>
 <body>
-  <h2>Login</h2>
-  <input type="email" id="email" placeholder="Enter your email">
-  <button onclick="login()">Login</button>
-  <button onclick="resetForm()">Reset</button>
-
-  <h3>User Info</h3>
-  <div id="userInfo"></div>
+  <div class="container">
+    <h2>Login</h2>
+    <form id="login-form">
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" placeholder="Enter your email" required>
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="Enter your password" required>
+      </div>
+      <div class="form-group">
+        <button type="submit">Login</button>
+      </div>
+    </form>
+    <div id="ip-display" class="ip-display"></div>
+  </div>
 
   <script>
-    let savedIP = localStorage.getItem('savedIP'); // Retrieve saved IP from localStorage if exists
-
-    async function getIP() {
-      if (!savedIP) {  // Only fetch IP if it's not already saved
-        try {
-          const res = await fetch("https://api.ipify.org?format=json");
-          const data = await res.json();
-          savedIP = data.ip;
-          localStorage.setItem('savedIP', savedIP); // Save IP to localStorage
-        } catch (error) {
-          console.error("IP fetch error:", error);
-          savedIP = "Unavailable";
-        }
+    // Function to fetch the user's IP address from an external API
+    async function getUserIP() {
+      try {
+        const response = await fetch('https://api.ipify.org?format=json');
+        const data = await response.json();
+        return data.ip;
+      } catch (error) {
+        console.error('Error fetching IP:', error);
+        return 'Unable to fetch IP';
       }
     }
 
-    async function login() {
+    // Check if the IP is stored and still valid
+    function checkStoredIP() {
+      const storedIP = localStorage.getItem('userIP');
+      const storedTimestamp = localStorage.getItem('ipTimestamp');
+      const currentTime = new Date().getTime();
+      
+      // Check if IP exists and is within 24 hours
+      if (storedIP && storedTimestamp && currentTime - storedTimestamp < 24 * 60 * 60 * 1000) {
+        return storedIP;
+      }
+      return null;
+    }
+
+    // Save the IP and timestamp in localStorage
+    function saveIPToLocalStorage(ip) {
+      const timestamp = new Date().getTime();
+      localStorage.setItem('userIP', ip);
+      localStorage.setItem('ipTimestamp', timestamp);
+    }
+
+    // Display the stored IP if valid, or fetch and store it if not
+    async function displayIP() {
+      let ip = checkStoredIP();
+      
+      if (!ip) {
+        ip = await getUserIP();
+        saveIPToLocalStorage(ip);
+      }
+
+      document.getElementById('ip-display').innerHTML = `Your IP: ${ip}`;
+    }
+
+    // Display IP after form submission and IP check
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
       const email = document.getElementById('email').value;
-      if (!email) {
-        alert("Please enter an email.");
-        return;
-      }
+      const password = document.getElementById('password').value;
 
-      // Get IP if not already fetched
-      await getIP();
+      // Display the IP
+      await displayIP();
 
-      document.getElementById('userInfo').innerHTML = `
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>IP Address:</strong> ${savedIP}</p>
-      `;
-    }
+      // For server-side, you would send the email and IP to your back-end API to save
+      // Example: sendDataToServer(email, ip);
 
-    function resetForm() {
-      document.getElementById('email').value = '';
-      document.getElementById('userInfo').innerHTML = `
-        <p><strong>Email:</strong> </p>
-        <p><strong>IP Address:</strong> ${savedIP ?? "Unavailable"}</p>
-      `;
-    }
+      // For now, log to console (in actual implementation, send to server)
+      console.log('Email:', email, 'IP:', ip);
+    });
 
-    // Fetch IP initially on load if not already saved
-    window.onload = getIP;
+    // Display the IP on page load
+    displayIP();
   </script>
 </body>
 </html>
