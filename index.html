@@ -14,16 +14,19 @@
   <div id="userInfo"></div>
 
   <script>
-    let savedIP = null;
+    let savedIP = localStorage.getItem('savedIP'); // Retrieve saved IP from localStorage if exists
 
     async function getIP() {
-      try {
-        const res = await fetch("https://api.ipify.org?format=json");
-        const data = await res.json();
-        savedIP = data.ip;
-      } catch (error) {
-        console.error("IP fetch error:", error);
-        savedIP = "Unavailable";
+      if (!savedIP) {  // Only fetch IP if it's not already saved
+        try {
+          const res = await fetch("https://api.ipify.org?format=json");
+          const data = await res.json();
+          savedIP = data.ip;
+          localStorage.setItem('savedIP', savedIP); // Save IP to localStorage
+        } catch (error) {
+          console.error("IP fetch error:", error);
+          savedIP = "Unavailable";
+        }
       }
     }
 
@@ -35,9 +38,7 @@
       }
 
       // Get IP if not already fetched
-      if (!savedIP) {
-        await getIP();
-      }
+      await getIP();
 
       document.getElementById('userInfo').innerHTML = `
         <p><strong>Email:</strong> ${email}</p>
@@ -53,7 +54,7 @@
       `;
     }
 
-    // Fetch IP initially on load
+    // Fetch IP initially on load if not already saved
     window.onload = getIP;
   </script>
 </body>
