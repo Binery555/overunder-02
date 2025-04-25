@@ -1,100 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Two-Screen Browser</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-        }
-
-        .container {
-            display: flex;
-            height: 100vh;
-            width: 100vw;
-        }
-
-        .resizable {
-            display: flex;
-            flex-grow: 1;
-            overflow: hidden;
-            position: relative;
-        }
-
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: 3px solid transparent;
-            box-sizing: border-box;
-        }
-
-        iframe.active {
-            border: 3px solid black;
-        }
-
-        .divider {
-            width: 5px;
-            cursor: col-resize;
-            background-color: #ccc;
-            z-index: 10;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Email + IP Display</title>
 </head>
 <body>
-    <div class="container">
-        <div class="resizable" id="left-pane">
-            <iframe src="https://deriv.com/" id="iframe1"></iframe>
-        </div>
-        <div class="divider" id="divider"></div>
-        <div class="resizable" id="right-pane">
-            <iframe src="https://derivesupanalyzer.site/" id="iframe2"></iframe>
-        </div>
-    </div>
+  <h2>Login</h2>
+  <input type="email" id="email" placeholder="Enter your email">
+  <button onclick="login()">Login</button>
+  <button onclick="resetForm()">Reset</button>
 
-    <script>
-        // Handle iframe focus
-        const iframes = document.querySelectorAll("iframe");
-        iframes.forEach((iframe) => {
-            iframe.addEventListener("pointerdown", () => {
-                iframes.forEach(i => i.classList.remove("active"));
-                iframe.classList.add("active");
-            });
-        });
+  <h3>User Info</h3>
+  <div id="userInfo"></div>
 
-        // Handle resize
-        const divider = document.getElementById("divider");
-        const leftPane = document.getElementById("left-pane");
-        const rightPane = document.getElementById("right-pane");
+  <script>
+    let savedIP = null;
 
-        let isResizing = false;
+    async function getIP() {
+      try {
+        const res = await fetch("https://api.ipify.org?format=json");
+        const data = await res.json();
+        savedIP = data.ip;
+      } catch (error) {
+        console.error("IP fetch error:", error);
+        savedIP = "Unavailable";
+      }
+    }
 
-        divider.addEventListener("mousedown", (e) => {
-            isResizing = true;
-            document.body.style.cursor = "col-resize";
-        });
+    async function login() {
+      const email = document.getElementById('email').value;
+      if (!email) {
+        alert("Please enter an email.");
+        return;
+      }
 
-        document.addEventListener("mousemove", (e) => {
-            if (!isResizing) return;
+      // Get IP if not already fetched
+      if (!savedIP) {
+        await getIP();
+      }
 
-            const containerOffsetLeft = document.querySelector('.container').offsetLeft;
-            const pointerRelativeX = e.clientX - containerOffsetLeft;
-            const containerWidth = document.querySelector('.container').offsetWidth;
+      document.getElementById('userInfo').innerHTML = `
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>IP Address:</strong> ${savedIP}</p>
+      `;
+    }
 
-            const leftWidthPercent = (pointerRelativeX / containerWidth) * 100;
-            const rightWidthPercent = 100 - leftWidthPercent;
+    function resetForm() {
+      document.getElementById('email').value = '';
+      document.getElementById('userInfo').innerHTML = `
+        <p><strong>Email:</strong> </p>
+        <p><strong>IP Address:</strong> ${savedIP ?? "Unavailable"}</p>
+      `;
+    }
 
-            leftPane.style.width = `${leftWidthPercent}%`;
-            rightPane.style.width = `${rightWidthPercent}%`;
-        });
-
-        document.addEventListener("mouseup", () => {
-            isResizing = false;
-            document.body.style.cursor = "default";
-        });
-    </script>
+    // Fetch IP initially on load
+    window.onload = getIP;
+  </script>
 </body>
 </html>
