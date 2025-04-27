@@ -2,62 +2,106 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>IP Tracker</title>
+  <title>Binary Bot Tool</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f4f6f8; }
+    #login-section, #bot-section { margin-bottom: 20px; }
+    #bot-section { display: none; }
+    .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-top: 20px; }
+    .balance { font-size: 1.5em; color: green; }
+    button { padding: 10px 20px; border: none; background: #007bff; color: white; border-radius: 5px; cursor: pointer; }
+    button:hover { background: #0056b3; }
+    input { padding: 10px; width: 300px; }
+  </style>
 </head>
 <body>
-  <h2>Welcome to the App</h2>
-  <p>Your IP will be logged for security purposes.</p>
-  
-  <div id="ip-info"></div>
-  <h3>All Active IPs:</h3>
-  <ul id="active-ips"></ul>
+
+  <h1>Binary Bot Tool</h1>
+
+  <!-- Login Section -->
+  <div id="login-section" class="card">
+    <h2>Login with OAuth Token</h2>
+    <input type="text" id="token-input" placeholder="Enter your Deriv API Token" />
+    <button id="login-button">Login</button>
+    <p id="login-status" style="color: red; margin-top: 10px;"></p>
+  </div>
+
+  <!-- Bot Section -->
+  <div id="bot-section">
+    <div class="card">
+      <h2>Account Information</h2>
+      <p><strong>Login ID:</strong> <span id="login-id"></span></p>
+      <p><strong>Currency:</strong> <span id="currency"></span></p>
+      <p class="balance"><strong>Balance:</strong> <span id="balance"></span></p>
+      <button id="refresh-balance">Refresh Balance</button>
+    </div>
+
+    <div class="card">
+      <h2>Binary Bot Controls</h2>
+      <p>🛠️ Bot Controls coming soon... (You can add Buy/Sell buttons here)</p>
+    </div>
+  </div>
 
   <script>
-    async function getIPInfo() {
-      try {
-        const response = await fetch('https://ipapi.co/json/');
-        const data = await response.json();
+    let ws;
+    let authToken = 'QSDAQPsfjphEvtT'; // Use your provided API token here
 
-        // Display own IP info
-        document.getElementById('ip-info').innerHTML = `
-          <strong>Your IP:</strong> ${data.ip}<br>
-          <strong>Location:</strong> ${data.city}, ${data.region}, ${data.country_name}
-        `;
+    document.getElementById('login-button').addEventListener('click', () => {
+      authToken = document.getElementById('token-input').value.trim();
+      if (authToken === '') {
+        document.getElementById('login-status').textContent = 'Please enter a valid token.';
+        return;
+      }
 
-        // Send IP info to server
-        await fetch('https://your-server.com/log-ip', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(data)
-        });
+      ws = new WebSocket('wss://ws.derivws.com/websockets/v3?app_id=1089'); // or your app_id
 
-      } catch (error) {
-        console.error('Failed to fetch or log IP info:', error);
+      ws.onopen = () => {
+        console.log('WebSocket connected');
+        ws.send(JSON.stringify({ authorize: authToken }));
+      };
+
+      ws.onmessage = (msg) => {
+        const data = JSON.parse(msg.data);
+        console.log(data);
+
+        if (data.msg_type === 'authorize') {
+          document.getElementById('login-section').style.display = 'none';
+          document.getElementById('bot-section').style.display = 'block';
+
+          document.getElementById('login-id').textContent = data.authorize.loginid;
+          document.getElementById('currency').textContent = data.authorize.currency;
+
+          getBalance();
+        }
+        else if (data.msg_type === 'balance') {
+          document.getElementById('balance').textContent = data.balance.balance + ' ' + data.balance.currency;
+        }
+        else if (data.error) {
+          document.getElementById('login-status').textContent = data.error.message;
+        }
+      };
+
+      ws.onerror = (err) => {
+        console.error('WebSocket error', err);
+        document.getElementById('login-status').textContent = 'Connection error.';
+      };
+    });
+
+    function getBalance() {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ balance: 1, subscribe: 1 }));
       }
     }
 
-    async function fetchActiveIPs() {
-      try {
-        const res = await fetch('https://your-server.com/active-ips');
-        const ipList = await res.json();
+    document.getElementById('refresh-balance').addEventListener('click', () => {
+      getBalance();
+    });
 
-        const ipUl = document.getElementById('active-ips');
-        ipUl.innerHTML = '';
-        ipList.forEach(ip => {
-          const li = document.createElement('li');
-          li.textContent = ip;
-          ipUl.appendChild(li);
-        });
-      } catch (err) {
-        console.error('Error fetching active IPs:', err);
-      }
-    }
-
-    getIPInfo();
-    fetchActiveIPs();
-    setInterval(fetchActiveIPs, 5000); // Refresh every 5 seconds
+    window.onbeforeunload = () => {
+      if (ws) ws.close();
+    };
   </script>
+
 </body>
 </html>
