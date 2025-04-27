@@ -1,129 +1,316 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OAuth and Deriv WebSocket</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 0;
-        }
-        #content {
-            padding: 20px;
-        }
-        #connect-button {
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-            background-color: #28a745;
-            color: white;
-            border: none;
-            border-radius: 5px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Deriv Bot Builder Clone</title>
+  <style>
+    /* Base Styles */
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f7fa;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .top-nav, .container, .sidebar, .workspace, .right-panel, .block, .workspace-header, .run-section, .summary, .reset-btn {
+      box-sizing: border-box;
+    }
+
+    /* Top Nav */
+    .top-nav {
+      background: #fff;
+      padding: 10px 20px;
+      border-bottom: 1px solid #ddd;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .top-nav .left, .top-nav .right {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .top-nav .right button {
+      background: #ff444f;
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    /* Layout */
+    .container {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+    .sidebar {
+      width: 250px;
+      background: #fff;
+      border-right: 1px solid #ddd;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .workspace {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      background: #f5f7fa;
+    }
+    .right-panel {
+      width: 300px;
+      background: #fff;
+      border-left: 1px solid #ddd;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Sidebar */
+    .sidebar h2 { font-size: 18px; margin-bottom: 15px; }
+    .sidebar ul { list-style: none; padding: 0; }
+    .sidebar ul li {
+      padding: 10px;
+      cursor: pointer;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      background: #eee;
+    }
+    .sidebar ul li:hover { background: #ddd; }
+
+    /* Workspace */
+    .workspace-header {
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .workspace-header button {
+      padding: 6px 12px;
+      border: 1px solid #ddd;
+      background: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .blocks {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .block {
+      background: #003366;
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      width: 320px;
+      min-height: 250px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .block h3 {
+      margin-top: 0;
+      font-size: 18px;
+    }
+    .block select, .block input {
+      width: 100%;
+      padding: 5px;
+      margin-top: 10px;
+      border-radius: 4px;
+      border: none;
+      font-size: 14px;
+    }
+
+    /* Right Panel */
+    .run-section {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .run-section button {
+      background: #00c2a8;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .summary {
+      flex: 1;
+      background: #fafafa;
+      border: 1px solid #ddd;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+    }
+    .summary h4 { margin-bottom: 10px; }
+    .summary p { margin: 5px 0; }
+    .reset-btn {
+      margin-top: 20px;
+      padding: 8px;
+      width: 100%;
+      border: 1px solid #ff444f;
+      background: #fff;
+      color: #ff444f;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    /* Dragging */
+    .block.dragging {
+      opacity: 0.5;
+    }
+  </style>
 </head>
+
 <body>
-    <div id="content">
-        <h1>Connect to Deriv Trading WebSocket</h1>
-        <button id="connect-button">Connect to Deriv WebSocket</button>
-        <div id="status"></div>
+
+  <!-- Top Navigation -->
+  <div class="top-nav">
+    <div class="left">
+      <strong>Trader's Hub</strong> | <strong>derivBot</strong> | Reports | Cashier
+    </div>
+    <div class="right">
+      <span id="balance">2.41 USD</span>
+      <button>Deposit</button>
+    </div>
+  </div>
+
+  <!-- Main Layout -->
+  <div class="container">
+    
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <h2>Blocks Menu</h2>
+      <ul>
+        <li onclick="addBlock('Trade Parameters')">Trade Parameters</li>
+        <li onclick="addBlock('Purchase Conditions')">Purchase Conditions</li>
+        <li onclick="addBlock('Sell Conditions')">Sell Conditions</li>
+        <li onclick="addBlock('Restart Trading')">Restart Trading</li>
+      </ul>
     </div>
 
-    <script>
-        // OAuth variables
-        const clientId = 'QSDAQPsfjphEvtT';  // Replace with your OAuth Client ID
-        const redirectUri = 'https://binery555.github.io/overunder-02/';  // Replace with your redirect URI
-        const oauthUrl = `https://oauth-provider.com/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=profile`;
+    <!-- Workspace -->
+    <div class="workspace">
+      <div class="workspace-header">
+        <button onclick="quickStrategy()">Quick Strategy</button>
+      </div>
+      <div class="blocks" id="blocksArea">
+        <!-- Blocks will be added here -->
+      </div>
+    </div>
 
-        let accessToken = null;
+    <!-- Right Panel -->
+    <div class="right-panel">
+      <div class="run-section">
+        <button onclick="runBot()">Run</button>
+        <p id="botStatus">Bot is not running</p>
+      </div>
 
-        // When the page loads, check if we have an OAuth code in the URL (from the redirect)
-        const urlParams = new URLSearchParams(window.location.search);
-        const code = urlParams.get('code');
+      <div class="summary">
+        <h4>Summary</h4>
+        <p id="totalStake">Total Stake: 0.00 USD</p>
+        <p id="totalPayout">Total Payout: 0.00 USD</p>
+        <p id="runs">No. of Runs: 0</p>
+        <p id="won">Contracts Won: 0</p>
+        <p id="lost">Contracts Lost: 0</p>
+        <p id="profit">Profit/Loss: 0.00 USD</p>
+      </div>
 
-        if (code) {
-            // Step 1: Exchange authorization code for an access token
-            const tokenUrl = 'https://oauth-provider.com/token';  // Replace with your OAuth provider's token URL
-            const params = {
-                client_id: clientId,
-                client_secret: 'your-client-secret',  // Replace with your client secret
-                code: code,
-                redirect_uri: redirectUri,
-                grant_type: 'authorization_code'
-            };
+      <button class="reset-btn" onclick="resetBot()">Reset</button>
+    </div>
 
-            fetch(tokenUrl, {
-                method: 'POST',
-                body: new URLSearchParams(params),
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.access_token) {
-                    accessToken = data.access_token;
-                    document.getElementById('status').innerHTML = 'OAuth successful! Now you can connect to Deriv WebSocket.';
-                } else {
-                    document.getElementById('status').innerHTML = 'OAuth failed. Please try again.';
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching token:', error);
-                document.getElementById('status').innerHTML = 'Error fetching token.';
-            });
+  </div>
+
+  <script>
+    let runs = 0;
+    let contractsWon = 0;
+    let contractsLost = 0;
+    let totalProfit = 0;
+
+    function addBlock(title) {
+      const block = document.createElement('div');
+      block.className = 'block';
+      block.draggable = true;
+      block.innerHTML = `
+        <h3>${title}</h3>
+        <select>
+          <option>Option 1</option>
+          <option>Option 2</option>
+          <option>Option 3</option>
+        </select>
+        <input type="text" placeholder="Input Value">
+      `;
+      block.addEventListener('dragstart', () => block.classList.add('dragging'));
+      block.addEventListener('dragend', () => block.classList.remove('dragging'));
+      document.getElementById('blocksArea').appendChild(block);
+    }
+
+    function runBot() {
+      runs++;
+      const win = Math.random() > 0.5;
+      if (win) {
+        contractsWon++;
+        totalProfit += 0.5;
+      } else {
+        contractsLost++;
+        totalProfit -= 0.35;
+      }
+      document.getElementById('runs').innerText = `No. of Runs: ${runs}`;
+      document.getElementById('won').innerText = `Contracts Won: ${contractsWon}`;
+      document.getElementById('lost').innerText = `Contracts Lost: ${contractsLost}`;
+      document.getElementById('profit').innerText = `Profit/Loss: ${totalProfit.toFixed(2)} USD`;
+      document.getElementById('botStatus').innerText = "Bot is running...";
+    }
+
+    function resetBot() {
+      runs = 0;
+      contractsWon = 0;
+      contractsLost = 0;
+      totalProfit = 0;
+      document.getElementById('runs').innerText = `No. of Runs: 0`;
+      document.getElementById('won').innerText = `Contracts Won: 0`;
+      document.getElementById('lost').innerText = `Contracts Lost: 0`;
+      document.getElementById('profit').innerText = `Profit/Loss: 0.00 USD`;
+      document.getElementById('botStatus').innerText = "Bot is not running";
+    }
+
+    // Drag & Drop reorder
+    const blocksArea = document.getElementById('blocksArea');
+    blocksArea.addEventListener('dragover', e => {
+      e.preventDefault();
+      const dragging = document.querySelector('.dragging');
+      const afterElement = getDragAfterElement(blocksArea, e.clientY);
+      if (afterElement == null) {
+        blocksArea.appendChild(dragging);
+      } else {
+        blocksArea.insertBefore(dragging, afterElement);
+      }
+    });
+
+    function getDragAfterElement(container, y) {
+      const draggableElements = [...container.querySelectorAll('.block:not(.dragging)')];
+      return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) {
+          return { offset: offset, element: child };
+        } else {
+          return closest;
         }
+      }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
 
-        // Step 2: WebSocket connection to Deriv after OAuth
-        function connectToDerivWebSocket() {
-            if (!accessToken) {
-                document.getElementById('status').innerHTML = 'Please authenticate via OAuth first.';
-                return;
-            }
+    function quickStrategy() {
+      addBlock('Trade Parameters');
+      addBlock('Purchase Conditions');
+      addBlock('Sell Conditions');
+      addBlock('Restart Trading');
+    }
+  </script>
 
-            // Deriv WebSocket URL and access token (use it in the URL or headers)
-            const wsUrl = `wss://ws.binaryws.com/websockets/v3?access_token=${accessToken}`;
-            const socket = new WebSocket(wsUrl);
-
-            socket.onopen = () => {
-                console.log('WebSocket connected to Deriv');
-                document.getElementById('status').innerHTML = 'Connected to Deriv WebSocket!';
-                
-                // Subscribe to live price (for example, EUR/USD)
-                const subscribeMessage = {
-                    "ticks": "FRXEURUSD"
-                };
-                socket.send(JSON.stringify(subscribeMessage));
-            };
-
-            socket.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                console.log('Received data:', data);
-                if (data.tick) {
-                    console.log('Price:', data.tick.quote);
-                }
-            };
-
-            socket.onerror = (error) => {
-                console.error('WebSocket Error:', error);
-                document.getElementById('status').innerHTML = 'Error connecting to WebSocket.';
-            };
-
-            socket.onclose = () => {
-                console.log('WebSocket connection closed');
-                document.getElementById('status').innerHTML = 'Disconnected from WebSocket.';
-            };
-        }
-
-        // When the user clicks the button, connect to the WebSocket
-        document.getElementById('connect-button').addEventListener('click', () => {
-            connectToDerivWebSocket();
-        });
-
-        // Step 3: Redirect to OAuth provider if no code is present
-        if (!code) {
-            window.location.href = oauthUrl;  // Redirect user to OAuth provider for authentication
-        }
-    </script>
 </body>
 </html>
