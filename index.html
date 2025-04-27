@@ -1,107 +1,129 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Binary Bot Tool</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f4f6f8; }
-    #login-section, #bot-section { margin-bottom: 20px; }
-    #bot-section { display: none; }
-    .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-top: 20px; }
-    .balance { font-size: 1.5em; color: green; }
-    button { padding: 10px 20px; border: none; background: #007bff; color: white; border-radius: 5px; cursor: pointer; }
-    button:hover { background: #0056b3; }
-    input { padding: 10px; width: 300px; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OAuth and Deriv WebSocket</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        #content {
+            padding: 20px;
+        }
+        #connect-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+    </style>
 </head>
 <body>
-
-  <h1>Binary Bot Tool</h1>
-
-  <!-- Login Section -->
-  <div id="login-section" class="card">
-    <h2>Login with OAuth Token</h2>
-    <input type="text" id="token-input" placeholder="Enter your Deriv API Token" />
-    <button id="login-button">Login</button>
-    <p id="login-status" style="color: red; margin-top: 10px;"></p>
-  </div>
-
-  <!-- Bot Section -->
-  <div id="bot-section">
-    <div class="card">
-      <h2>Account Information</h2>
-      <p><strong>Login ID:</strong> <span id="login-id"></span></p>
-      <p><strong>Currency:</strong> <span id="currency"></span></p>
-      <p class="balance"><strong>Balance:</strong> <span id="balance"></span></p>
-      <button id="refresh-balance">Refresh Balance</button>
+    <div id="content">
+        <h1>Connect to Deriv Trading WebSocket</h1>
+        <button id="connect-button">Connect to Deriv WebSocket</button>
+        <div id="status"></div>
     </div>
 
-    <div class="card">
-      <h2>Binary Bot Controls</h2>
-      <p>🛠️ Bot Controls coming soon... (You can add Buy/Sell buttons here)</p>
-    </div>
-  </div>
+    <script>
+        // OAuth variables
+        const clientId = 'QSDAQPsfjphEvtT';  // Replace with your OAuth Client ID
+        const redirectUri = 'https://binery555.github.io/overunder-02/';  // Replace with your redirect URI
+        const oauthUrl = `https://oauth-provider.com/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=profile`;
 
-  <script>
-    let ws;
-    let authToken = 'QSDAQPsfjphEvtT'; // Use your provided API token here
+        let accessToken = null;
 
-    document.getElementById('login-button').addEventListener('click', () => {
-      authToken = document.getElementById('token-input').value.trim();
-      if (authToken === '') {
-        document.getElementById('login-status').textContent = 'Please enter a valid token.';
-        return;
-      }
+        // When the page loads, check if we have an OAuth code in the URL (from the redirect)
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
 
-      ws = new WebSocket('wss://ws.derivws.com/websockets/v3?app_id=1089'); // or your app_id
+        if (code) {
+            // Step 1: Exchange authorization code for an access token
+            const tokenUrl = 'https://oauth-provider.com/token';  // Replace with your OAuth provider's token URL
+            const params = {
+                client_id: clientId,
+                client_secret: 'your-client-secret',  // Replace with your client secret
+                code: code,
+                redirect_uri: redirectUri,
+                grant_type: 'authorization_code'
+            };
 
-      ws.onopen = () => {
-        console.log('WebSocket connected');
-        ws.send(JSON.stringify({ authorize: authToken }));
-      };
-
-      ws.onmessage = (msg) => {
-        const data = JSON.parse(msg.data);
-        console.log(data);
-
-        if (data.msg_type === 'authorize') {
-          document.getElementById('login-section').style.display = 'none';
-          document.getElementById('bot-section').style.display = 'block';
-
-          document.getElementById('login-id').textContent = data.authorize.loginid;
-          document.getElementById('currency').textContent = data.authorize.currency;
-
-          getBalance();
+            fetch(tokenUrl, {
+                method: 'POST',
+                body: new URLSearchParams(params),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.access_token) {
+                    accessToken = data.access_token;
+                    document.getElementById('status').innerHTML = 'OAuth successful! Now you can connect to Deriv WebSocket.';
+                } else {
+                    document.getElementById('status').innerHTML = 'OAuth failed. Please try again.';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching token:', error);
+                document.getElementById('status').innerHTML = 'Error fetching token.';
+            });
         }
-        else if (data.msg_type === 'balance') {
-          document.getElementById('balance').textContent = data.balance.balance + ' ' + data.balance.currency;
+
+        // Step 2: WebSocket connection to Deriv after OAuth
+        function connectToDerivWebSocket() {
+            if (!accessToken) {
+                document.getElementById('status').innerHTML = 'Please authenticate via OAuth first.';
+                return;
+            }
+
+            // Deriv WebSocket URL and access token (use it in the URL or headers)
+            const wsUrl = `wss://ws.binaryws.com/websockets/v3?access_token=${accessToken}`;
+            const socket = new WebSocket(wsUrl);
+
+            socket.onopen = () => {
+                console.log('WebSocket connected to Deriv');
+                document.getElementById('status').innerHTML = 'Connected to Deriv WebSocket!';
+                
+                // Subscribe to live price (for example, EUR/USD)
+                const subscribeMessage = {
+                    "ticks": "FRXEURUSD"
+                };
+                socket.send(JSON.stringify(subscribeMessage));
+            };
+
+            socket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                console.log('Received data:', data);
+                if (data.tick) {
+                    console.log('Price:', data.tick.quote);
+                }
+            };
+
+            socket.onerror = (error) => {
+                console.error('WebSocket Error:', error);
+                document.getElementById('status').innerHTML = 'Error connecting to WebSocket.';
+            };
+
+            socket.onclose = () => {
+                console.log('WebSocket connection closed');
+                document.getElementById('status').innerHTML = 'Disconnected from WebSocket.';
+            };
         }
-        else if (data.error) {
-          document.getElementById('login-status').textContent = data.error.message;
+
+        // When the user clicks the button, connect to the WebSocket
+        document.getElementById('connect-button').addEventListener('click', () => {
+            connectToDerivWebSocket();
+        });
+
+        // Step 3: Redirect to OAuth provider if no code is present
+        if (!code) {
+            window.location.href = oauthUrl;  // Redirect user to OAuth provider for authentication
         }
-      };
-
-      ws.onerror = (err) => {
-        console.error('WebSocket error', err);
-        document.getElementById('login-status').textContent = 'Connection error.';
-      };
-    });
-
-    function getBalance() {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ balance: 1, subscribe: 1 }));
-      }
-    }
-
-    document.getElementById('refresh-balance').addEventListener('click', () => {
-      getBalance();
-    });
-
-    window.onbeforeunload = () => {
-      if (ws) ws.close();
-    };
-  </script>
-
+    </script>
 </body>
 </html>
