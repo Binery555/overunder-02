@@ -1,3 +1,4 @@
+<!-- ✅ FULL HTML CODE FOR DERIV BOT UI WITH LIVE CR NUMBER AND BALANCE -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -63,12 +64,8 @@
       font-size: 12px;
       border: 4px solid transparent;
     }
-    .highlight-yellow {
-      border-color: yellow;
-    }
-    .highlight-blue {
-      border-color: blue;
-    }
+    .highlight-yellow { border-color: yellow; }
+    .highlight-blue { border-color: blue; }
     .analysis {
       display: flex;
       gap: 10px;
@@ -97,12 +94,8 @@
       padding: 10px;
       color: #000;
     }
-    .over {
-      background-color: #d9fdd3;
-    }
-    .under {
-      background-color: #ffdede;
-    }
+    .over { background-color: #d9fdd3; }
+    .under { background-color: #ffdede; }
     .bar .progress {
       height: 10px;
       background-color: lightgray;
@@ -110,17 +103,9 @@
       overflow: hidden;
       margin-top: 5px;
     }
-    .bar .progress-inner {
-      height: 100%;
-    }
-    .progress-over {
-      width: 41.4%;
-      background-color: green;
-    }
-    .progress-under {
-      width: 58.6%;
-      background-color: red;
-    }
+    .bar .progress-inner { height: 100%; }
+    .progress-over { background-color: green; }
+    .progress-under { background-color: red; }
     .history {
       display: flex;
       justify-content: center;
@@ -166,15 +151,58 @@
   </div>
 
   <div class="main">
-    <!-- Content sections (same as your original) -->
+    <div class="section">
+      <div style="text-align:center;">
+        <select id="market-select">
+          <option value="R_10">Volatility 10 Index</option>
+          <option value="R_25">Volatility 25 Index</option>
+          <option value="R_50">Volatility 50 Index</option>
+          <option value="R_75">Volatility 75 Index</option>
+        </select>
+        <input type="number" value="1000" />
+      </div>
+
+      <div style="text-align:center; margin-top: 10px;">
+        Stake: <input id="stake" type="number" value="1" style="width: 60px; margin-right: 20px;" />
+        Duration: <input id="duration" type="number" value="5" style="width: 60px;" /> ticks
+      </div>
+
+      <div style="text-align:center; margin-top: 15px;">
+        <label><input type="radio" name="contractType" value="RISE" checked> Rise</label>
+        <label style="margin-left: 20px;"><input type="radio" name="contractType" value="FALL"> Fall</label>
+      </div>
+
+      <div class="price">1625.810</div>
+      <div class="circle-container"></div>
+      <div id="trade-result" style="text-align:center; margin-top: 15px; font-size: 18px; font-weight: bold;"></div>
+    </div>
+
+    <div class="section">
+      <div class="analysis">
+        <button>0</button><button>1</button><button>2</button><button>3</button><button>4</button>
+        <button style="background:#007bff; color:#fff;">5</button>
+        <button>6</button><button>7</button><button>8</button><button>9</button>
+      </div>
+
+      <div class="bar-section">
+        <div class="bar over">
+          <strong>Over 0%</strong>
+          <div class="progress"><div class="progress-inner progress-over" style="width: 0%;"></div></div>
+        </div>
+        <div class="bar under">
+          <strong>Under 0%</strong>
+          <div class="progress"><div class="progress-inner progress-under" style="width: 0%;"></div></div>
+        </div>
+      </div>
+
+      <div class="history"></div>
+    </div>
   </div>
 
-  <div class="footer">
-    ⚠️ Risk Disclaimer
-  </div>
+  <div class="footer">⚠️ Risk Disclaimer</div>
 
   <script>
-    const token = "QSDAQPsfjphEvtT";
+    const token = "QSDAQPsfjphEvtT"; // Replace with your token
     const appId = 69656;
     const ws = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${appId}`);
 
@@ -249,9 +277,7 @@
         updateBars();
         updateHistoryBoxes();
 
-        if (!inContract && totalTicks % 5 === 0) {
-          purchaseContract();
-        }
+        if (!inContract && totalTicks % 5 === 0) purchaseContract();
       }
 
       if (data.msg_type === "proposal" && isBotRunning && !inContract) {
