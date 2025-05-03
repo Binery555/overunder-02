@@ -1,364 +1,421 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Trading Interface</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <meta charset="UTF-8">
+  <title>Binary Tools Bot</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
   <style>
     body {
-      background-color: #f8f9fa;
+      background-color: #121212;
+      color: #fff;
+      font-family: 'Roboto', sans-serif;
+      margin: 0;
     }
-    .trade-card {
+    .navbar {
+      background-color: #00254d;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .navbar .left, .navbar .right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .navbar a {
+      color: #fff;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    .main {
+      padding: 20px;
+    }
+    .section {
+      background-color: #1d1d1d;
       border-radius: 10px;
       padding: 20px;
-      background: #ffffff;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
       margin-bottom: 20px;
     }
-    .btn-rise {
-      background-color: #00c080;
-      color: white;
-    }
-    .btn-fall {
-      background-color: #d63447;
-      color: white;
-    }
-    .btn-rise:hover {
-      background-color: #009f66;
-    }
-    .btn-fall:hover {
-      background-color: #b32436;
-    }
-    .balance-card {
-      padding: 10px 20px;
-      background: white;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 30px;
-    }
-    .badge-real {
-      background-color: #007bff;
-    }
-    .badge-demo {
-      background-color: #6c757d;
-    }
-    .price-box {
-      width: 120px;
-      padding: 10px;
-      border-radius: 8px;
+    .price {
       text-align: center;
+      font-size: 24px;
+      color: #e44;
       font-weight: bold;
-      font-size: 20px;
-      color: white;
-      margin: 0 auto 20px;
-      transition: background-color 0.3s ease;
     }
-    .ldp-chart {
+    .circle-container {
       display: flex;
       justify-content: center;
-      gap: 12px;
-      margin: 40px 0;
+      gap: 15px;
+      margin: 20px 0;
+      flex-wrap: wrap;
     }
-    .ldp-dot {
-      position: relative;
-      width: 56px;
-      height: 56px;
+    .circle {
+      width: 60px;
+      height: 60px;
       border-radius: 50%;
-      background: #1e1e1e;
-      color: #fff;
-      font-weight: bold;
+      background: #333;
       display: flex;
       flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      font-size: 12px;
+      border: 4px solid transparent;
+    }
+    .highlight-yellow {
+      border-color: yellow;
+    }
+    .highlight-blue {
+      border-color: blue;
+    }
+    .analysis {
+      display: flex;
+      gap: 10px;
       align-items: center;
       justify-content: center;
-      font-size: 16px;
-      transition: box-shadow 0.3s ease;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
     }
-    .ldp-dot span.percent {
-      font-size: 11px;
-      font-weight: normal;
-      color: #ccc;
-    }
-    .ldp-dot .arc {
-      position: absolute;
-      bottom: -4px;
-      left: 0;
-      width: 100%;
-      height: 8px;
-      border-bottom-left-radius: 50%;
-      border-bottom-right-radius: 50%;
-      background: #555;
-    }
-    .ldp-dot[data-color="green"] .arc {
-      background: #00ff88;
-      box-shadow: 0 0 15px #00ff88;
-    }
-    .ldp-dot[data-color="red"] .arc {
-      background: #ff4d4f;
-      box-shadow: 0 0 15px #ff4d4f;
-    }
-    .ldp-dot.selected {
-      border: 2px solid #fff;
-    }
-    .ldp-dot .arrow {
-      display: none;
-    }
-    .ldp-dot.selected .arrow {
-      display: block;
-      position: absolute;
-      bottom: -12px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 0;
-      height: 0;
-      border-left: 6px solid transparent;
-      border-right: 6px solid transparent;
-      border-top: 6px solid #ff7f50;
-    }
-
-    #trade-story {
-      position: fixed;
-      top: 20px;
-      left: 20px;
-      background: rgba(255,255,255,0.95);
-      padding: 15px 20px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      font-size: 14px;
-      display: none;
-      z-index: 1000;
-    }
-    #trade-story .close-arrow {
-      text-align: right;
-      font-size: 20px;
+    .analysis button {
+      padding: 10px 15px;
+      background-color: #fff;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
       cursor: pointer;
+    }
+    .bar-section {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .bar {
+      width: 48%;
+      border-radius: 10px;
+      padding: 10px;
       color: #000;
+    }
+    .over {
+      background-color: #d9fdd3;
+    }
+    .under {
+      background-color: #ffdede;
+    }
+    .bar .progress {
+      height: 10px;
+      background-color: lightgray;
+      border-radius: 5px;
+      overflow: hidden;
+      margin-top: 5px;
+    }
+    .bar .progress-inner {
+      height: 100%;
+    }
+    .progress-over {
+      width: 41.4%;
+      background-color: green;
+    }
+    .progress-under {
+      width: 58.6%;
+      background-color: red;
+    }
+    .history {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .history .box {
+      width: 30px;
+      height: 30px;
+      border-radius: 4px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-weight: bold;
+    }
+    .box.o { background: green; }
+    .box.u { background: red; }
+    .box.more { background: blue; }
+    .footer {
+      background-color: #000;
+      color: yellow;
+      padding: 10px;
+      font-weight: bold;
+      text-align: center;
     }
   </style>
 </head>
 <body>
-
-  <div id="trade-story">
-    <div class="close-arrow" onclick="hideTradeStory()">&#x25BC;</div>
-    <strong>Trade Summary</strong><br/>
-    Stake: <span id="ts-stake">$0.00</span><br/>
-    Contract Value: <span id="ts-contract">$0.00</span><br/>
-    Payout: <span id="ts-payout">$0.00</span><br/>
-    Result: <span id="ts-result">-</span><br/>
-    Total P/L: <span id="ts-total">$0.00</span>
+  <div class="navbar">
+    <div class="left">
+      <a href="#">Free Bots</a>
+      <a href="#">Dashboard</a>
+      <a href="#">Bot Builder</a>
+      <a href="#">Smart Analysis</a>
+    </div>
+    <div class="right">
+      <button style="background-color:#00d09c; color:#000; padding:10px 20px; border:none; border-radius:5px;">Run</button>
+      <span>💲0.00 USD</span>
+    </div>
   </div>
 
-  <div class="container py-5">
-    <div class="balance-card mb-4">
-      <div>
-        <span class="badge badge-demo p-2">Demo Account</span>
-        <span id="demo-balance" class="ms-2 fw-bold">$1000.00</span>
-      </div>
-      <div>
-        <span class="badge badge-real p-2">Real Account</span>
-        <span id="real-balance" class="ms-2 fw-bold text-primary">$1000.00</span>
-      </div>
-    </div>
-
-    <div id="price-box" class="price-box bg-secondary">0.0000</div>
-
-    <div class="row mb-4">
-      <div class="col-md-6 mb-3">
-        <label class="form-label">Market</label>
-        <select id="market-select" class="form-select">
-          <option value="R_25">Volatility 25 Index</option>
+  <div class="main">
+    <div class="section">
+      <div style="text-align:center;">
+        <select id="market-select">
           <option value="R_10">Volatility 10 Index</option>
+          <option value="R_25">Volatility 25 Index</option>
           <option value="R_50">Volatility 50 Index</option>
+          <option value="R_75">Volatility 75 Index</option>
         </select>
+        <input type="number" value="1000" />
       </div>
-      <div class="col-md-6 mb-3">
-        <label class="form-label">Trade Type</label>
-        <select id="trade-type-select" class="form-select">
-          <option value="RISEFALL">Rise/Fall</option>
-          <option value="HIGHERLOWER">Higher/Lower</option>
-        </select>
+
+      <div style="text-align:center; margin-top: 10px;">
+        Stake: <input id="stake" type="number" value="1" style="width: 60px; margin-right: 20px;" />
+        Duration: <input id="duration" type="number" value="5" style="width: 60px;" /> ticks
       </div>
+
+      <div style="text-align:center; margin-top: 15px;">
+        <label><input type="radio" name="contractType" value="RISE" checked> Rise</label>
+        <label style="margin-left: 20px;"><input type="radio" name="contractType" value="FALL"> Fall</label>
+      </div>
+
+      <div class="price">1625.810</div>
+      <div class="circle-container"></div>
+      <div id="trade-result" style="text-align:center; margin-top: 15px; font-size: 18px; font-weight: bold;"></div>
     </div>
 
-    <div id="ldp-chart" class="ldp-chart"></div>
+    <div class="section">
+      <div class="analysis">
+        <button>0</button><button>1</button><button>2</button><button>3</button><button>4</button>
+        <button style="background:#007bff; color:#fff;">5</button>
+        <button>6</button><button>7</button><button>8</button><button>9</button>
+      </div>
 
-    <div class="row mb-4">
-      <div class="col-md-4 mb-3">
-        <label class="form-label">Start Time</label>
-        <select id="start-time-select" class="form-select">
-          <option value="now">Now</option>
-          <option value="later">Later</option>
-        </select>
-      </div>
-      <div class="col-md-4 mb-3">
-        <label class="form-label">Last Digit Numbers</label>
-        <div class="d-flex justify-content-around">
-          <select id="last-digit-select" class="form-select">
-            <option value="0">0</option>
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-            <option value="6">6</option>
-            <option value="7">7</option>
-            <option value="8">8</option>
-            <option value="9">9</option>
-          </select>
+      <div class="bar-section">
+        <div class="bar over">
+          <strong>Over</strong> 41.4%
+          <div class="progress">
+            <div class="progress-inner progress-over"></div>
+          </div>
+        </div>
+        <div class="bar under">
+          <strong>Under</strong> 58.6%
+          <div class="progress">
+            <div class="progress-inner progress-under"></div>
+          </div>
         </div>
       </div>
-      <div class="col-md-4 mb-3">
-        <label class="form-label">Stake</label>
-        <div class="input-group">
-          <input id="stake-input" type="number" class="form-control" value="10" min="1" />
-          <span class="input-group-text">USD</span>
-        </div>
-      </div>
+
+      <div class="history"></div>
     </div>
 
-    <div class="row">
-      <div class="col-md-6">
-        <div class="trade-card text-center">
-          <h4 class="text-success">Rise</h4>
-          <p><strong>Stake:</strong> <span id="rise-stake">10.00</span> USD</p>
-          <p><strong>Payout:</strong> Auto</p>
-          <button id="buy-rise" class="btn btn-rise w-100 mt-3">Purchase Rise</button>
-        </div>
-      </div>
-      <div class="col-md-6">
-        <div class="trade-card text-center">
-          <h4 class="text-danger">Fall</h4>
-          <p><strong>Stake:</strong> <span id="fall-stake">10.00</span> USD</p>
-          <p><strong>Payout:</strong> Auto</p>
-          <button id="buy-fall" class="btn btn-fall w-100 mt-3">Purchase Fall</button>
-        </div>
+    <div class="section" id="history-section">
+      <h3 style="text-align:center;">📜 Contract History</h3>
+      <ul id="contract-history" style="list-style:none; padding:0; max-height:200px; overflow-y:auto;"></ul>
+      <div style="text-align:center; margin-top:10px;">
+        <strong>Total Profit: </strong><span id="total-profit" style="color: lightgreen;">$0.00</span>
       </div>
     </div>
+  </div>
+
+  <div class="footer">
+    ⚠️ Risk Disclaimer
   </div>
 
   <script>
-    const app_id = 69656;
     const token = "QSDAQPsfjphEvtT";
-    let ws = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${app_id}`);
-    let balances = { demo: 1000, real: 1000 };
-    let latestPrice = 0;
-    let activeTrade = null;
+    const appId = 69656;
+    const ws = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${appId}`);
 
-    ws.onopen = () => { authorize(); };
-    function authorize() { ws.send(JSON.stringify({ authorize: token })); }
-    ws.onmessage = ({ data }) => {
-      const msg = JSON.parse(data);
-      if (msg.msg_type === "authorize") subscribeToPrice();
-      if (msg.msg_type === "tick") updatePriceBox(parseFloat(msg.tick.quote));
+    let digitCounts = Array(10).fill(0);
+    let historyQueue = [];
+    let totalTicks = 0;
+    let currentSymbol = 'R_10';
+    let isBotRunning = false;
+    let inContract = false;
+    let contractType = "RISE";
+    let totalProfit = 0;
+
+    const runBtn = document.querySelector(".right button");
+    const balanceSpan = document.querySelector(".right span");
+
+    document.querySelectorAll('input[name="contractType"]').forEach(input => {
+      input.addEventListener('change', (e) => {
+        contractType = e.target.value;
+      });
+    });
+
+    runBtn.addEventListener("click", () => {
+      isBotRunning = !isBotRunning;
+      runBtn.textContent = isBotRunning ? "Stop" : "Run";
+      document.getElementById("trade-result").textContent = "";
+
+      if (isBotRunning) {
+        ws.send(JSON.stringify({ authorize: token }));
+        subscribeToTicks(currentSymbol);
+      } else {
+        ws.send(JSON.stringify({ forget_all: 'ticks' }));
+      }
+    });
+
+    document.getElementById('market-select').addEventListener('change', (e) => {
+      currentSymbol = e.target.value;
+      if (isBotRunning) {
+        ws.send(JSON.stringify({ forget_all: 'ticks' }));
+        digitCounts = Array(10).fill(0);
+        totalTicks = 0;
+        historyQueue = [];
+        subscribeToTicks(currentSymbol);
+      }
+    });
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ authorize: token }));
     };
 
-    function subscribeToPrice() {
-      const symbol = document.getElementById("market-select").value;
-      ws.send(JSON.stringify({ ticks: symbol }));
-    }
+    ws.onmessage = (msg) => {
+      const data = JSON.parse(msg.data);
 
-    function updateSelectedDotFromPrice(price) {
-      const decimalPart = price.toString().split('.')[1] || '0';
-      const lastDigit = parseInt(decimalPart[0]) || 0;
-      const dots = document.querySelectorAll('.ldp-dot');
-      dots.forEach(dot => dot.classList.remove('selected'));
-      const selectedDot = dots[lastDigit];
-      if (selectedDot) selectedDot.classList.add('selected');
-    }
-
-    function updatePriceBox(newPrice) {
-      const box = document.getElementById("price-box");
-      if (latestPrice) {
-        box.className = 'price-box ' +
-          (newPrice > latestPrice ? 'bg-success' :
-           newPrice < latestPrice ? 'bg-danger' : 'bg-secondary');
+      if (data.msg_type === "authorize") {
+        ws.send(JSON.stringify({ balance: 1, account_type: "real" }));
       }
-      const trimmed = newPrice.toFixed(4).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
-      box.innerText = trimmed;
-      updateSelectedDotFromPrice(newPrice);
-      if (activeTrade) {
-        evaluateTrade(newPrice);
-        activeTrade = null;
+
+      if (data.msg_type === "balance") {
+        balanceSpan.textContent = `💲${parseFloat(data.balance.balance).toFixed(2)} USD`;
       }
-      latestPrice = newPrice;
+
+      if (data.msg_type === "tick" && isBotRunning) {
+        const price = parseFloat(data.tick.quote).toFixed(3);
+        document.querySelector('.price').textContent = price;
+
+        const lastDigit = parseInt(price.slice(-1));
+        digitCounts[lastDigit]++;
+        totalTicks++;
+
+        historyQueue.push(lastDigit >= 5 ? 'O' : 'U');
+        if (historyQueue.length > 9) historyQueue.shift();
+
+        updateDigitCircles();
+        updateBars();
+        updateHistoryBoxes();
+
+        if (!inContract && totalTicks % 5 === 0) {
+          purchaseContract();
+        }
+      }
+
+      if (data.msg_type === "proposal" && isBotRunning && !inContract) {
+        ws.send(JSON.stringify({ buy: data.proposal.id, price: data.proposal.ask_price }));
+        inContract = true;
+        document.getElementById("trade-result").textContent = `Contract: ${contractType} Running...`;
+        document.getElementById("trade-result").style.color = "#ffcc00";
+      }
+
+      if (data.msg_type === "buy") {
+        console.log("Buy Confirmed:", data.buy.transaction_id);
+      }
+
+      if (data.msg_type === "proposal_open_contract") {
+        if (data.proposal_open_contract.is_expired) {
+          inContract = false;
+          const profit = parseFloat(data.proposal_open_contract.profit).toFixed(2);
+          const resultEl = document.getElementById("trade-result");
+
+          if (profit > 0) {
+            resultEl.textContent = `✅ Win! Profit: $${profit}`;
+            resultEl.style.color = "lightgreen";
+          } else {
+            resultEl.textContent = `❌ Loss! Loss: $${profit}`;
+            resultEl.style.color = "red";
+          }
+
+          updateContractHistory(contractType, profit);
+          ws.send(JSON.stringify({ forget_all: "proposal_open_contract" }));
+        }
+      }
+    };
+
+    function subscribeToTicks(symbol) {
+      ws.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
     }
 
-    function purchaseRiseFall(type) {
-      const stake = +document.getElementById("stake-input").value;
-      const selectedDigit = +document.getElementById("last-digit-select").value;
-      activeTrade = { type, stake, selectedDigit };
+    function purchaseContract() {
+      const stake = parseFloat(document.getElementById('stake').value);
+      const duration = parseInt(document.getElementById('duration').value);
+
+      const proposal = {
+        proposal: 1,
+        amount: stake,
+        basis: "stake",
+        contract_type: contractType,
+        currency: "USD",
+        duration: duration,
+        duration_unit: "t",
+        symbol: currentSymbol
+      };
+
+      ws.send(JSON.stringify(proposal));
     }
 
-    function evaluateTrade(price) {
-      const p = activeTrade;
-      const decimalPart = price.toString().split('.')[1] || '0';
-      const lastDigit = parseInt(decimalPart[0]) || 0;
-      const win = (p.type === "RISE" && lastDigit > p.selectedDigit) ||
-                  (p.type === "FALL" && lastDigit < p.selectedDigit);
-      const payout = p.stake * 1.8;
-      const profitLoss = win ? payout - p.stake : -p.stake;
-      balances.demo += profitLoss;
-      updateBallColor(lastDigit, win);
-      updateBalanceDisplay();
-      showTradeStory(p.stake, payout, win);
+    function updateContractHistory(type, profit) {
+      const historyEl = document.getElementById("contract-history");
+      const li = document.createElement("li");
+      li.innerHTML = `<span style="color:${profit > 0 ? 'lightgreen' : 'red'}">${type} - ${profit > 0 ? 'Win' : 'Loss'}: $${profit}</span>`;
+      historyEl.prepend(li);
+
+      totalProfit += parseFloat(profit);
+      document.getElementById("total-profit").textContent = `$${totalProfit.toFixed(2)}`;
     }
 
-    function updateBallColor(digit, win) {
-      const dot = document.querySelector(`.ldp-dot:nth-child(${digit + 1})`);
-      if (dot) {
-        dot.dataset.color = win ? 'green' : 'red';
-        setTimeout(() => { dot.removeAttribute('data-color'); }, 1500);
+    function updateDigitCircles() {
+      const container = document.querySelector('.circle-container');
+      container.innerHTML = '';
+      digitCounts.forEach((count, digit) => {
+        const percent = ((count / totalTicks) * 100).toFixed(1);
+        const circle = document.createElement('div');
+        circle.className = 'circle';
+        if (percent >= 12) circle.classList.add('highlight-blue');
+        if (percent <= 8) circle.classList.add('highlight-yellow');
+        circle.innerHTML = `${digit}<br><small>${percent}%</small>`;
+        container.appendChild(circle);
+      });
+    }
+
+    function updateBars() {
+      let over = digitCounts.slice(5).reduce((a, b) => a + b, 0);
+      let under = digitCounts.slice(0, 5).reduce((a, b) => a + b, 0);
+      let overP = totalTicks ? ((over / totalTicks) * 100).toFixed(1) : 0;
+      let underP = totalTicks ? ((under / totalTicks) * 100).toFixed(1) : 0;
+
+      document.querySelector('.progress-over').style.width = `${overP}%`;
+      document.querySelector('.progress-under').style.width = `${underP}%`;
+      document.querySelector('.bar.over strong').innerHTML = `Over ${overP}%`;
+      document.querySelector('.bar.under strong').innerHTML = `Under ${underP}%`;
+    }
+
+    function updateHistoryBoxes() {
+      const historyDiv = document.querySelector('.history');
+      historyDiv.innerHTML = '';
+      historyQueue.forEach(type => {
+        const div = document.createElement('div');
+        div.className = 'box ' + (type === 'O' ? 'o' : 'u');
+        div.textContent = type;
+        historyDiv.appendChild(div);
+      });
+      if (historyQueue.length === 9) {
+        const more = document.createElement('div');
+        more.className = 'box more';
+        more.textContent = '+';
+        historyDiv.appendChild(more);
       }
     }
-
-    function showTradeStory(stake, payout, win) {
-      const result = win ? '✅ WIN' : '❌ LOSS';
-      const profitLoss = win ? (payout - stake) : -stake;
-      document.getElementById('ts-stake').innerText = `$${stake.toFixed(2)}`;
-      document.getElementById('ts-contract').innerText = `$${stake.toFixed(2)}`;
-      document.getElementById('ts-payout').innerText = win ? `$${payout.toFixed(2)}` : "$0.00";
-      document.getElementById('ts-result').innerText = result;
-      document.getElementById('ts-total').innerText = `$${profitLoss.toFixed(2)}`;
-      const story = document.getElementById('trade-story');
-      story.style.display = 'block';
-    }
-
-    function hideTradeStory() {
-      document.getElementById('trade-story').style.display = 'none';
-    }
-
-    function updateBalanceDisplay() {
-      document.getElementById("demo-balance").innerText = `$${balances.demo.toFixed(2)}`;
-      document.getElementById("real-balance").innerText = `$${balances.real.toFixed(2)}`;
-    }
-
-    document.getElementById("buy-rise").onclick = () => purchaseRiseFall("RISE");
-    document.getElementById("buy-fall").onclick = () => purchaseRiseFall("FALL");
-    document.getElementById("market-select").onchange = subscribeToPrice;
-
-    const ldpData = Array.from({ length: 10 }, (_, i) => ({
-      digit: i,
-      pct: +(9 + Math.random() * 2).toFixed(1)
-    }));
-
-    const chart = document.getElementById('ldp-chart');
-    ldpData.forEach(item => {
-      const dot = document.createElement('div');
-      dot.className = 'ldp-dot';
-      dot.innerHTML = `
-        ${item.digit}
-        <span class="percent">${item.pct.toFixed(1)}%</span>
-        <div class="arc"></div>
-        <div class="arrow"></div>
-      `;
-      chart.appendChild(dot);
-    });
   </script>
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
