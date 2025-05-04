@@ -1,4 +1,3 @@
-<!-- dashboard.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -61,6 +60,10 @@
       <button id="botToggle" onclick="toggleBot()">Start Bot</button>
       <p>Status: <span id="bot-status">Stopped</span></p>
     </div>
+
+    <div class="info-box">
+      <button onclick="logout()">Logout</button>
+    </div>
   </div>
 
   <script>
@@ -88,7 +91,6 @@
           const loginId = data.authorize.loginid;
           document.getElementById('cr-number').textContent = `CR: ${loginId}`;
           document.getElementById('cr-display').textContent = loginId;
-
           ws.send(JSON.stringify({ balance: 1, subscribe: 1 }));
         }
 
@@ -113,6 +115,11 @@
       document.getElementById('bot-status').textContent = botRunning ? 'Running' : 'Stopped';
       document.getElementById('botToggle').textContent = botRunning ? 'Stop Bot' : 'Start Bot';
       console.log(botRunning ? '✅ Bot started' : '⏹️ Bot stopped');
+    }
+
+    function logout() {
+      sessionStorage.clear();
+      window.location.href = 'index.html';
     }
   </script>
 </body>
