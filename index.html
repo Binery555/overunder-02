@@ -1,417 +1,225 @@
-!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Binary Tools Bot</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <title>Deriv Trading Bot</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body {
-      background-color: #121212;
-      color: #fff;
-      font-family: 'Roboto', sans-serif;
-      margin: 0;
-    }
-    .navbar {
-      background-color: #00254d;
-      padding: 10px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .navbar .left, .navbar .right {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-    }
-    .navbar a {
-      color: #fff;
-      text-decoration: none;
-      font-weight: bold;
-    }
-    .main {
-      padding: 20px;
-    }
-    .section {
-      background-color: #1d1d1d;
-      border-radius: 10px;
-      padding: 20px;
-      margin-bottom: 20px;
-    }
-    .price {
-      text-align: center;
-      font-size: 24px;
-      color: #e44;
-      font-weight: bold;
-    }
-    .circle-container {
-      display: flex;
-      justify-content: center;
-      gap: 15px;
-      margin: 20px 0;
-      flex-wrap: wrap;
-    }
-    .circle {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      background: #333;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      color: #fff;
-      font-size: 12px;
-      border: 4px solid transparent;
-    }
-    .highlight-yellow { border-color: yellow; }
-    .highlight-blue { border-color: blue; }
-    .analysis {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 10px;
-      flex-wrap: wrap;
-    }
-    .analysis button {
-      padding: 10px 15px;
-      background-color: #fff;
-      border: none;
-      border-radius: 5px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .bar-section {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 20px;
-      flex-wrap: wrap;
-    }
-    .bar {
-      width: 48%;
-      border-radius: 10px;
-      padding: 10px;
-      color: #000;
-    }
-    .over { background-color: #d9fdd3; }
-    .under { background-color: #ffdede; }
-    .bar .progress {
-      height: 10px;
-      background-color: lightgray;
-      border-radius: 5px;
-      overflow: hidden;
-      margin-top: 5px;
-    }
-    .bar .progress-inner {
-      height: 100%;
-    }
-    .progress-over { width: 41.4%; background-color: green; }
-    .progress-under { width: 58.6%; background-color: red; }
-    .history {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 20px;
-      flex-wrap: wrap;
-    }
-    .history .box {
-      width: 30px;
-      height: 30px;
-      border-radius: 4px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      color: white;
-      font-weight: bold;
-    }
-    .box.o { background: green; }
-    .box.u { background: red; }
-    .box.more { background: blue; }
-    .footer {
-      background-color: #000;
-      color: yellow;
-      padding: 10px;
-      font-weight: bold;
-      text-align: center;
-    }
+    body { background: #0e1218; color: #cfd8dc; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 1rem; }
+    .box { background: #1b1f27; padding: 1rem; border-radius: 10px; margin-bottom: 1rem; }
+    input, select, button { padding: 0.5rem; font-size: 1rem; margin-top: 0.5rem; width: 100%; }
+    .flex-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+    .status-win { color: #00e676; font-weight: bold; animation: pulseGreen 0.5s; }
+    .status-loss { color: #ff5252; font-weight: bold; animation: pulseRed 0.5s; }
+    @keyframes pulseGreen { 0% { background-color: #00e67633; } 100% { background-color: transparent; } }
+    @keyframes pulseRed { 0% { background-color: #ff525233; } 100% { background-color: transparent; } }
+    canvas { background: #12151c; border-radius: 10px; }
   </style>
 </head>
 <body>
-  <div class="navbar">
-    <div class="left">
-      <a href="#">Free Bots</a>
-      <a href="#">Dashboard</a>
-      <a href="#">Bot Builder</a>
-      <a href="#">Smart Analysis</a>
-    </div>
-    <div class="right">
-      <button style="background-color:#00d09c; color:#000; padding:10px 20px; border:none; border-radius:5px;">Run</button>
-      <div style="display: flex; flex-direction: column; align-items: flex-end;">
-        <span id="balanceDisplay">💲0.00 USD</span>
-        <span id="crNumberDisplay" style="font-size: 12px; color: #ccc;">CR ID: ----</span>
-      </div>
-    </div>
+
+  <div class="box">
+    <h2>🔑 Deriv Bot Login</h2>
+    <input type="text" id="token" placeholder="Enter Deriv API Token">
+    <button onclick="connect()">Connect</button>
+    <div id="loginStatus"></div>
   </div>
 
-  <div class="main">
-    <div class="section">
-      <div style="text-align:center;">
-        <select id="market-select">
-          <option value="R_10">Volatility 10 Index</option>
-          <option value="R_25">Volatility 25 Index</option>
-          <option value="R_50">Volatility 50 Index</option>
-          <option value="R_75">Volatility 75 Index</option>
+  <div class="box" id="dashboard" style="display:none;">
+    <h3>📊 Account Info</h3>
+    <p>Balance: <span id="balance">--</span> | Currency: <span id="currency">--</span></p>
+    <div class="flex-row">
+      <div style="flex:1">
+        <label>Market</label>
+        <select id="market">
+          <option value="R_50">Volatility 50</option>
+          <option value="R_100">Volatility 100</option>
+          <option value="R_50_1HZ">Volatility 50 (1s)</option>
         </select>
-        <input type="number" value="1000" />
       </div>
-
-      <div style="text-align:center; margin-top: 10px;">
-        Stake: <input id="stake" type="number" value="1" style="width: 60px; margin-right: 20px;" />
-        Duration: <input id="duration" type="number" value="5" style="width: 60px;" /> ticks
+      <div style="flex:1">
+        <label>Type</label>
+        <select id="tradeType">
+          <option value="CALL">Rise</option>
+          <option value="PUT">Fall</option>
+        </select>
       </div>
-
-      <div style="text-align:center; margin-top: 15px;">
-        <label><input type="radio" name="contractType" value="RISE" checked> Rise</label>
-        <label style="margin-left: 20px;"><input type="radio" name="contractType" value="FALL"> Fall</label>
+      <div style="flex:1">
+        <label>Stake</label>
+        <input type="number" id="stake" value="1">
       </div>
-
-      <div class="price">1625.810</div>
-      <div class="circle-container"></div>
-      <div id="trade-result" style="text-align:center; margin-top: 15px; font-size: 18px; font-weight: bold;"></div>
+      <div style="flex:1">
+        <label>Ticks</label>
+        <input type="number" id="duration" value="5">
+      </div>
     </div>
-
-    <div class="section">
-      <div class="analysis">
-        <button>0</button><button>1</button><button>2</button><button>3</button><button>4</button>
-        <button style="background:#007bff; color:#fff;">5</button>
-        <button>6</button><button>7</button><button>8</button><button>9</button>
+    <div class="flex-row">
+      <div style="flex:1">
+        <label>Stop Loss</label>
+        <input type="number" id="stopLoss" value="-10">
       </div>
-
-      <div class="bar-section">
-        <div class="bar over">
-          <strong>Over</strong> 41.4%
-          <div class="progress">
-            <div class="progress-inner progress-over"></div>
-          </div>
-        </div>
-        <div class="bar under">
-          <strong>Under</strong> 58.6%
-          <div class="progress">
-            <div class="progress-inner progress-under"></div>
-          </div>
-        </div>
+      <div style="flex:1">
+        <label>Take Profit</label>
+        <input type="number" id="takeProfit" value="10">
       </div>
-
-      <div class="history"></div>
     </div>
-
-    <div class="section">
-      <h3>🤖 Bot Behavior</h3>
-      <div id="bot-behavior" style="background:#1a1a1a; padding:10px; border-radius:5px; font-size:14px; height:100px; overflow-y:auto;"></div>
-    </div>
-
-    <div class="section">
-      <h3>📈 Trade History</h3>
-      <ul id="trade-history" style="list-style:none; padding:0; margin:0;"></ul>
-    </div>
+    <button onclick="toggleAutoTrade()" id="autoBtn" style="margin-top:1rem">▶️ Start Auto Trade</button>
   </div>
 
-  <div class="footer">
-    ⚠️ Risk Disclaimer
+  <div class="box">
+    <h3>📈 Indicators</h3>
+    <canvas id="tickChart" height="100"></canvas>
+    <p>RSI: <span id="rsi">--</span> | MA(5): <span id="ma">--</span></p>
   </div>
+
+  <div class="box">
+    <h3>📜 Contract Behavior</h3>
+    <p>Status: <span id="contractStatus">Idle</span></p>
+    <p>Ticks: <span id="tickProgress"></span></p>
+  </div>
+
+  <div class="box">
+    <h3>📂 Trade History</h3>
+    <ul id="history"></ul>
+  </div>
+
+  <audio id="winSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+  <audio id="loseSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
 
   <script>
-    const token = "QSDAQPsfjphEvtT";
-    const appId = 69656;
-    const ws = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${appId}`);
+    let ws, token, ticks = [], chart, contractId, tickCount = 0, maxTicks = 5;
+    let autoTrading = false, profit = 0;
 
-    let digitCounts = Array(10).fill(0);
-    let historyQueue = [];
-    let totalTicks = 0;
-    let currentSymbol = 'R_10';
-    let isBotRunning = false;
-    let inContract = false;
-    let contractType = "RISE";
-
-    const runBtn = document.querySelector(".right button");
-    const balanceSpan = document.getElementById("balanceDisplay");
-    const crSpan = document.getElementById("crNumberDisplay");
-
-    document.querySelectorAll('input[name="contractType"]').forEach(input => {
-      input.addEventListener('change', (e) => {
-        contractType = e.target.value;
-      });
-    });
-
-    runBtn.addEventListener("click", () => {
-      isBotRunning = !isBotRunning;
-      runBtn.textContent = isBotRunning ? "Stop" : "Run";
-      document.getElementById("trade-result").textContent = "";
-
-      if (isBotRunning) {
-        ws.send(JSON.stringify({ authorize: token }));
-        subscribeToTicks(currentSymbol);
-      } else {
-        ws.send(JSON.stringify({ forget_all: 'ticks' }));
-      }
-    });
-
-    document.getElementById('market-select').addEventListener('change', (e) => {
-      currentSymbol = e.target.value;
-      if (isBotRunning) {
-        ws.send(JSON.stringify({ forget_all: 'ticks' }));
-        digitCounts = Array(10).fill(0);
-        totalTicks = 0;
-        historyQueue = [];
-        subscribeToTicks(currentSymbol);
-      }
-    });
-
-    ws.onopen = () => {
-      ws.send(JSON.stringify({ authorize: token }));
-    };
-
-    ws.onmessage = (msg) => {
-      const data = JSON.parse(msg.data);
-
-      if (data.msg_type === "authorize") {
-        crSpan.textContent = `CR ID: ${data.authorize.loginid}`;
-        ws.send(JSON.stringify({ balance: 1, account_type: "real" }));
-      }
-
-      if (data.msg_type === "balance") {
-        balanceSpan.textContent = `💲${parseFloat(data.balance.balance).toFixed(2)} USD`;
-      }
-
-      if (data.msg_type === "tick" && isBotRunning) {
-        const price = parseFloat(data.tick.quote).toFixed(3);
-        document.querySelector('.price').textContent = price;
-
-        const lastDigit = parseInt(price.slice(-1));
-        digitCounts[lastDigit]++;
-        totalTicks++;
-
-        historyQueue.push(lastDigit >= 5 ? 'O' : 'U');
-        if (historyQueue.length > 9) historyQueue.shift();
-
-        updateDigitCircles();
-        updateBars();
-        updateHistoryBoxes();
-
-        if (!inContract && totalTicks % 5 === 0) {
-          purchaseContract();
+    function connect() {
+      token = document.getElementById('token').value.trim();
+      ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
+      ws.onopen = () => ws.send(JSON.stringify({ authorize: token }));
+      ws.onmessage = (msg) => {
+        const data = JSON.parse(msg.data);
+        if (data.msg_type === 'authorize') {
+          document.getElementById('dashboard').style.display = 'block';
+          ws.send(JSON.stringify({ balance: 1 }));
+          subscribeTicks();
         }
-      }
-
-      if (data.msg_type === "proposal" && isBotRunning && !inContract) {
-        ws.send(JSON.stringify({ buy: data.proposal.id, price: data.proposal.ask_price }));
-        inContract = true;
-        document.getElementById("trade-result").textContent = `Contract: ${contractType} Running...`;
-        document.getElementById("trade-result").style.color = "#ffcc00";
-      }
-
-      if (data.msg_type === "buy") {
-        console.log("Buy Confirmed:", data.buy.transaction_id);
-      }
-
-      if (data.msg_type === "proposal_open_contract") {
-        if (data.proposal_open_contract.is_expired) {
-          inContract = false;
-          const profit = parseFloat(data.proposal_open_contract.profit).toFixed(2);
-          const resultEl = document.getElementById("trade-result");
-          const time = new Date().toLocaleTimeString();
-          const direction = contractType;
-          const summary = `${time} - ${direction} - ${profit > 0 ? "✅ Win" : "❌ Loss"} - P/L: $${profit}`;
-
-          // Update bot behavior log
-          const behaviorBox = document.getElementById("bot-behavior");
-          behaviorBox.innerHTML += summary + "<br>";
-          behaviorBox.scrollTop = behaviorBox.scrollHeight;
-
-          // Add to trade history
-          const li = document.createElement("li");
-          li.textContent = summary;
-          li.style.color = profit > 0 ? "lightgreen" : "salmon";
-          document.getElementById("trade-history").prepend(li);
-
-          if (profit > 0) {
-            resultEl.textContent = `✅ Win! Profit: $${profit}`;
-            resultEl.style.color = "lightgreen";
-          } else {
-            resultEl.textContent = `❌ Loss! Loss: $${profit}`;
-            resultEl.style.color = "red";
+        if (data.msg_type === 'balance') {
+          document.getElementById('balance').innerText = data.balance.balance;
+          document.getElementById('currency').innerText = data.balance.currency;
+        }
+        if (data.msg_type === 'tick') {
+          const quote = parseFloat(data.tick.quote);
+          ticks.push(quote); if (ticks.length > 50) ticks.shift();
+          updateChart(); updateIndicators();
+          if (contractId) {
+            tickCount++;
+            document.getElementById('tickProgress').innerText = tickCount + '/' + maxTicks;
+            if (tickCount >= maxTicks) {
+              endContract();
+            }
           }
-
-          ws.send(JSON.stringify({ forget_all: "proposal_open_contract" }));
         }
-      }
-    };
+        if (data.msg_type === 'buy') {
+          contractId = data.buy.contract_id;
+          document.getElementById('contractStatus').innerText = 'Running...';
+          document.getElementById('contractStatus').className = '';
+          tickCount = 0;
+        }
+        if (data.error) alert('❌ Error: ' + data.error.message);
+      };
+    }
 
-    function subscribeToTicks(symbol) {
+    function subscribeTicks() {
+      const symbol = document.getElementById('market').value;
       ws.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
     }
 
-    function purchaseContract() {
-      const stake = parseFloat(document.getElementById('stake').value);
-      const duration = parseInt(document.getElementById('duration').value);
-
-      const proposal = {
-        proposal: 1,
-        amount: stake,
-        basis: "stake",
-        contract_type: contractType,
-        currency: "USD",
-        duration: duration,
-        duration_unit: "t",
-        symbol: currentSymbol
-      };
-
-      ws.send(JSON.stringify(proposal));
+    function runTrade() {
+      const symbol = document.getElementById('market').value;
+      const amount = parseFloat(document.getElementById('stake').value);
+      maxTicks = parseInt(document.getElementById('duration').value);
+      const type = document.getElementById('tradeType').value;
+      ws.send(JSON.stringify({
+        buy: 1,
+        price: amount,
+        parameters: {
+          amount: amount,
+          basis: "stake",
+          contract_type: type,
+          currency: "USD",
+          duration: maxTicks,
+          duration_unit: "t",
+          symbol: symbol
+        }
+      }));
     }
 
-    function updateDigitCircles() {
-      const container = document.querySelector('.circle-container');
-      container.innerHTML = '';
-      digitCounts.forEach((count, digit) => {
-        const percent = ((count / totalTicks) * 100).toFixed(1);
-        const circle = document.createElement('div');
-        circle.className = 'circle';
-        if (percent >= 12) circle.classList.add('highlight-blue');
-        if (percent <= 8) circle.classList.add('highlight-yellow');
-        circle.innerHTML = `${digit}<br><small>${percent}%</small>`;
-        container.appendChild(circle);
-      });
+    function toggleAutoTrade() {
+      autoTrading = !autoTrading;
+      document.getElementById('autoBtn').innerText = autoTrading ? '⏹ Stop Auto Trade' : '▶️ Start Auto Trade';
+      if (autoTrading) runTrade();
     }
 
-    function updateBars() {
-      let over = digitCounts.slice(5).reduce((a, b) => a + b, 0);
-      let under = digitCounts.slice(0, 5).reduce((a, b) => a + b, 0);
-      let overP = totalTicks ? ((over / totalTicks) * 100).toFixed(1) : 0;
-      let underP = totalTicks ? ((under / totalTicks) * 100).toFixed(1) : 0;
-
-      document.querySelector('.progress-over').style.width = `${overP}%`;
-      document.querySelector('.progress-under').style.width = `${underP}%`;
-      document.querySelector('.bar.over strong').innerHTML = `Over ${overP}%`;
-      document.querySelector('.bar.under strong').innerHTML = `Under ${underP}%`;
-    }
-
-    function updateHistoryBoxes() {
-      const historyDiv = document.querySelector('.history');
-      historyDiv.innerHTML = '';
-      historyQueue.forEach(type => {
-        const div = document.createElement('div');
-        div.className = 'box ' + (type === 'O' ? 'o' : 'u');
-        div.textContent = type;
-        historyDiv.appendChild(div);
-      });
-      if (historyQueue.length === 9) {
-        const more = document.createElement('div');
-        more.className = 'box more';
-        more.textContent = '+';
-        historyDiv.appendChild(more);
+    function endContract() {
+      const win = Math.random() > 0.5; // simulate for now
+      const result = win ? '✅ Won' : '❌ Lost';
+      profit += win ? parseFloat(document.getElementById('stake').value) : -parseFloat(document.getElementById('stake').value);
+      document.getElementById('contractStatus').innerText = result;
+      document.getElementById('contractStatus').className = win ? 'status-win' : 'status-loss';
+      document.getElementById(win ? 'winSound' : 'loseSound').play();
+      ws.send(JSON.stringify({ balance: 1 })); // Update balance after contract
+      const li = document.createElement('li');
+      li.textContent = result + ' | Total Profit: ' + profit.toFixed(2);
+      document.getElementById('history').prepend(li);
+      const sl = parseFloat(document.getElementById('stopLoss').value);
+      const tp = parseFloat(document.getElementById('takeProfit').value);
+      if (autoTrading && (profit >= tp || profit <= sl)) {
+        autoTrading = false;
+        alert(profit >= tp ? '🎯 Take Profit reached!' : '🛑 Stop Loss reached!');
+      } else if (autoTrading) {
+        setTimeout(runTrade, 2000);
       }
+    }
+
+    function updateChart() {
+      if (!chart) {
+        const ctx = document.getElementById('tickChart').getContext('2d');
+        chart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: ticks.map((_, i) => i + 1),
+            datasets: [{
+              label: 'Tick Price',
+              data: ticks,
+              borderWidth: 2,
+              fill: false
+            }]
+          },
+          options: {
+            responsive: true,
+            scales: { y: { beginAtZero: false } }
+          }
+        });
+      } else {
+        chart.data.labels = ticks.map((_, i) => i + 1);
+        chart.data.datasets[0].data = ticks;
+        chart.update();
+      }
+    }
+
+    function updateIndicators() {
+      if (ticks.length < 6) return;
+      const ma = ticks.slice(-5).reduce((a, b) => a + b, 0) / 5;
+      const gains = [], losses = [];
+      for (let i = ticks.length - 5; i < ticks.length - 1; i++) {
+        const diff = ticks[i + 1] - ticks[i];
+        if (diff >= 0) gains.push(diff); else losses.push(Math.abs(diff));
+      }
+      const avgGain = gains.reduce((a, b) => a + b, 0) / gains.length || 0.01;
+      const avgLoss = losses.reduce((a, b) => a + b, 0) / losses.length || 0.01;
+      const rs = avgGain / avgLoss;
+      const rsi = 100 - (100 / (1 + rs));
+      document.getElementById('ma').innerText = ma.toFixed(2);
+      document.getElementById('rsi').innerText = rsi.toFixed(1);
     }
   </script>
 </body>
 </html>
-
