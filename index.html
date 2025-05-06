@@ -79,6 +79,12 @@
   </div>
 
   <div class="box">
+    <h3>📊 Stats Summary</h3>
+    <p>Total Runs: <span id="totalRuns">0</span> | Wins: <span id="wins">0</span> | Losses: <span id="losses">0</span></p>
+    <p>Total Stake: $<span id="totalStake">0.00</span> | Total Payout: $<span id="totalPayout">0.00</span> | PnL: $<span id="pnl">0.00</span></p>
+  </div>
+
+  <div class="box">
     <h3>📂 Trade History</h3>
     <ul id="history"></ul>
   </div>
@@ -89,6 +95,8 @@
   <script>
     let ws, token, ticks = [], chart, contractId, tickCount = 0, maxTicks = 5;
     let autoTrading = false, profit = 0;
+    let totalRuns = 0, totalWins = 0, totalLosses = 0;
+    let totalStake = 0, totalPayout = 0;
 
     function connect() {
       token = document.getElementById('token').value.trim();
@@ -109,19 +117,20 @@
           const quote = parseFloat(data.tick.quote);
           ticks.push(quote); if (ticks.length > 50) ticks.shift();
           updateChart(); updateIndicators();
-          if (contractId) {
+
+          if (contractId && autoTrading) {
             tickCount++;
             document.getElementById('tickProgress').innerText = tickCount + '/' + maxTicks;
-            if (tickCount >= maxTicks) {
-              endContract();
-            }
+            if (tickCount >= maxTicks) endContract();
           }
         }
         if (data.msg_type === 'buy') {
           contractId = data.buy.contract_id;
-          document.getElementById('contractStatus').innerText = 'Running...';
-          document.getElementById('contractStatus').className = '';
-          tickCount = 0;
+          if (autoTrading) {
+            document.getElementById('contractStatus').innerText = 'Running...';
+            document.getElementById('contractStatus').className = '';
+            tickCount = 0;
+          }
         }
         if (data.error) alert('❌ Error: ' + data.error.message);
       };
@@ -159,24 +168,43 @@
     }
 
     function endContract() {
-      const win = Math.random() > 0.5; // simulate for now
-      const result = win ? '✅ Won' : '❌ Lost';
-      profit += win ? parseFloat(document.getElementById('stake').value) : -parseFloat(document.getElementById('stake').value);
-      document.getElementById('contractStatus').innerText = result;
+      if (!autoTrading) return; // skip all behavior if not active
+
+      const win = Math.random() > 0.5;
+      const stake = parseFloat(document.getElementById('stake').value);
+      const payout = win ? stake * 2 : 0;
+
+      document.getElementById('contractStatus').innerText = win ? '✅ Won' : '❌ Lost';
       document.getElementById('contractStatus').className = win ? 'status-win' : 'status-loss';
       document.getElementById(win ? 'winSound' : 'loseSound').play();
-      ws.send(JSON.stringify({ balance: 1 })); // Update balance after contract
+
+      totalRuns++;
+      totalStake += stake;
+      totalPayout += payout;
+      if (win) totalWins++; else totalLosses++;
+      profit += win ? stake : -stake;
+
+      document.getElementById('totalRuns').innerText = totalRuns;
+      document.getElementById('wins').innerText = totalWins;
+      document.getElementById('losses').innerText = totalLosses;
+      document.getElementById('totalStake').innerText = totalStake.toFixed(2);
+      document.getElementById('totalPayout').innerText = totalPayout.toFixed(2);
+      document.getElementById('pnl').innerText = (totalPayout - totalStake).toFixed(2);
+
       const li = document.createElement('li');
-      li.textContent = result + ' | Total Profit: ' + profit.toFixed(2);
+      li.textContent = (win ? '✅ Won' : '❌ Lost') + ' | Total Profit: ' + profit.toFixed(2);
       document.getElementById('history').prepend(li);
+
       const sl = parseFloat(document.getElementById('stopLoss').value);
       const tp = parseFloat(document.getElementById('takeProfit').value);
-      if (autoTrading && (profit >= tp || profit <= sl)) {
+      if (profit >= tp || profit <= sl) {
         autoTrading = false;
         alert(profit >= tp ? '🎯 Take Profit reached!' : '🛑 Stop Loss reached!');
-      } else if (autoTrading) {
+      } else {
         setTimeout(runTrade, 2000);
       }
+
+      ws.send(JSON.stringify({ balance: 1 }));
     }
 
     function updateChart() {
