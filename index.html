@@ -1,253 +1,289 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Deriv Trading Bot</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Binance Futures Analyzer with Signal History</title>
+  <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
   <style>
-    body { background: #0e1218; color: #cfd8dc; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 1rem; }
-    .box { background: #1b1f27; padding: 1rem; border-radius: 10px; margin-bottom: 1rem; }
-    input, select, button { padding: 0.5rem; font-size: 1rem; margin-top: 0.5rem; width: 100%; }
-    .flex-row { display: flex; gap: 1rem; flex-wrap: wrap; }
-    .status-win { color: #00e676; font-weight: bold; animation: pulseGreen 0.5s; }
-    .status-loss { color: #ff5252; font-weight: bold; animation: pulseRed 0.5s; }
-    @keyframes pulseGreen { 0% { background-color: #00e67633; } 100% { background-color: transparent; } }
-    @keyframes pulseRed { 0% { background-color: #ff525233; } 100% { background-color: transparent; } }
-    canvas { background: #12151c; border-radius: 10px; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+    html, body { height: 100%; background: #000; color: #fcd535; }
+    body { display: flex; }
+    .sidebar, .main-chart, .trade-panel { padding: 10px; }
+    .sidebar { width: 20%; background: #111; border-right: 2px solid #333; overflow-y: auto; }
+    .main-chart { width: 55%; background: #0a0a0a; display: flex; flex-direction: column; }
+    .trade-panel { width: 25%; background: #111; border-left: 2px solid #333; overflow-y: auto; }
+    .market-item { padding: 12px; border-bottom: 1px solid #222; cursor: pointer; transition: 0.3s; }
+    .market-item:hover { background: #1a1a1a; box-shadow: 0 0 10px #fcd53555; }
+    .green { color: #00e676; }
+    .red { color: #ff1744; }
+    .chart-header { padding: 10px; background: #111; border-bottom: 1px solid #333; display: flex; justify-content: space-between; }
+    .chart-container { flex-grow: 1; }
+    #tv_chart_container { width: 100%; height: 100%; }
+    .trade-card {
+      margin: 15px; padding: 15px; background: #1a1a1a; border-left: 5px solid #fcd535;
+      border-radius: 8px; box-shadow: 0 0 15px #fcd53533; position: relative;
+    }
+    .signal-strength {
+      position: absolute; top: 10px; right: 10px; padding: 5px 12px; font-weight: bold;
+      border-radius: 20px; animation: glow 1.5s infinite alternate;
+    }
+    .signal-low { background: #ff1744; color: white; }
+    .signal-medium { background: #f39c12; color: white; }
+    .signal-high { background: #00e676; color: black; }
+    @keyframes glow {
+      from { box-shadow: 0 0 5px #fcd53533; }
+      to { box-shadow: 0 0 20px #fcd53599; }
+    }
+    /* History styling */
+    #signalHistory { margin: 10px 15px; }
+    .history-entry { margin-bottom: 10px; padding: 10px; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; }
+    .history-entry h5 { margin-bottom: 5px; font-size: 0.9rem; }
+    .history-entry p { margin: 2px 0; font-size: 0.8rem; }
   </style>
 </head>
 <body>
-
-  <div class="box">
-    <h2>🔑 Deriv Bot Login</h2>
-    <input type="text" id="token" placeholder="Enter Deriv API Token">
-    <button onclick="connect()">Connect</button>
-    <div id="loginStatus"></div>
+  <div class="sidebar">
+    <h3>Markets</h3>
+    <input type="text" id="marketSearch" placeholder="Search..." style="width: 100%; padding: 8px; margin: 10px 0; background: #222; color: #fcd535; border: 1px solid #333; border-radius: 4px;" />
+    <select id="sortOption" style="width: 100%; padding: 8px; margin-bottom: 10px; background: #222; color: #fcd535; border: 1px solid #333; border-radius: 4px;">
+      <option value="none">Sort By</option>
+      <option value="change">% Change Desc</option>
+      <option value="volume">Volume Desc</option>
+    </select>
+    <div id="markets"></div>
   </div>
 
-  <div class="box" id="dashboard" style="display:none;">
-    <h3>📊 Account Info</h3>
-    <p>Balance: <span id="balance">--</span> | Currency: <span id="currency">--</span></p>
-    <div class="flex-row">
-      <div style="flex:1">
-        <label>Market</label>
-        <select id="market">
-          <option value="R_50">Volatility 50</option>
-          <option value="R_100">Volatility 100</option>
-          <option value="R_50_1HZ">Volatility 50 (1s)</option>
-        </select>
-      </div>
-      <div style="flex:1">
-        <label>Type</label>
-        <select id="tradeType">
-          <option value="CALL">Rise</option>
-          <option value="PUT">Fall</option>
-        </select>
-      </div>
-      <div style="flex:1">
-        <label>Stake</label>
-        <input type="number" id="stake" value="1">
-      </div>
-      <div style="flex:1">
-        <label>Ticks</label>
-        <input type="number" id="duration" value="5">
-      </div>
+  <div class="main-chart">
+    <div class="chart-header">
+      <h2 id="symbol">BTCUSDT</h2>
+      <span id="price" class="green">-</span>
     </div>
-    <div class="flex-row">
-      <div style="flex:1">
-        <label>Stop Loss</label>
-        <input type="number" id="stopLoss" value="-10">
-      </div>
-      <div style="flex:1">
-        <label>Take Profit</label>
-        <input type="number" id="takeProfit" value="10">
-      </div>
-    </div>
-    <button onclick="toggleAutoTrade()" id="autoBtn" style="margin-top:1rem">▶️ Start Auto Trade</button>
+    <div class="chart-container"><div id="tv_chart_container"></div></div>
   </div>
 
-  <div class="box">
-    <h3>📈 Indicators</h3>
-    <canvas id="tickChart" height="100"></canvas>
-    <p>RSI: <span id="rsi">--</span> | MA(5): <span id="ma">--</span></p>
+  <div class="trade-panel">
+    <h3>Futures Signal</h3>
+    <div id="tradeDetails"><p>Choose a market to analyze.</p></div>
+    <h3 style="margin-top: 20px;">Spot Signal</h3>
+    <div id="spotDetails"><p>Choose a market to analyze.</p></div>
+    <h3 style="margin-top: 20px;">Signal History</h3>
+    <div id="signalHistory"><p>No history yet.</p></div>
   </div>
-
-  <div class="box">
-    <h3>📜 Contract Behavior</h3>
-    <p>Status: <span id="contractStatus">Idle</span></p>
-    <p>Ticks: <span id="tickProgress"></span></p>
-  </div>
-
-  <div class="box">
-    <h3>📊 Stats Summary</h3>
-    <p>Total Runs: <span id="totalRuns">0</span> | Wins: <span id="wins">0</span> | Losses: <span id="losses">0</span></p>
-    <p>Total Stake: $<span id="totalStake">0.00</span> | Total Payout: $<span id="totalPayout">0.00</span> | PnL: $<span id="pnl">0.00</span></p>
-  </div>
-
-  <div class="box">
-    <h3>📂 Trade History</h3>
-    <ul id="history"></ul>
-  </div>
-
-  <audio id="winSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
-  <audio id="loseSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
 
   <script>
-    let ws, token, ticks = [], chart, contractId, tickCount = 0, maxTicks = 5;
-    let autoTrading = false, profit = 0;
-    let totalRuns = 0, totalWins = 0, totalLosses = 0;
-    let totalStake = 0, totalPayout = 0;
+    let currentSymbol = 'BTCUSDT';
+    let widget;
+    const historyArr = [];
 
-    function connect() {
-      token = document.getElementById('token').value.trim();
-      ws = new WebSocket("wss://ws.derivws.com/websockets/v3?app_id=1089");
-      ws.onopen = () => ws.send(JSON.stringify({ authorize: token }));
-      ws.onmessage = (msg) => {
-        const data = JSON.parse(msg.data);
-        if (data.msg_type === 'authorize') {
-          document.getElementById('dashboard').style.display = 'block';
-          ws.send(JSON.stringify({ balance: 1 }));
-          subscribeTicks();
+    function updateChart(symbol) {
+      if (widget) widget.remove();
+      widget = new TradingView.widget({
+        container_id: 'tv_chart_container',
+        autosize: true,
+        symbol: 'BINANCE:' + symbol,
+        interval: '15',
+        theme: 'Dark',
+        style: '1',
+        locale: 'en',
+        toolbar_bg: '#0a0a0a',
+        studies: ['RSI@tv-basicstudies', 'MACD@tv-basicstudies', 'BB@tv-basicstudies'],
+        allow_symbol_change: false,
+        hide_side_toolbar: false,
+        drawings_access: {
+          type: 'black',
+          tools: [{ name: "ArrowMarkUp" }, { name: "ArrowMarkDown" }, { name: "Text" }]
         }
-        if (data.msg_type === 'balance') {
-          document.getElementById('balance').innerText = data.balance.balance;
-          document.getElementById('currency').innerText = data.balance.currency;
-        }
-        if (data.msg_type === 'tick') {
-          const quote = parseFloat(data.tick.quote);
-          ticks.push(quote); if (ticks.length > 50) ticks.shift();
-          updateChart(); updateIndicators();
+      });
 
-          if (contractId && autoTrading) {
-            tickCount++;
-            document.getElementById('tickProgress').innerText = tickCount + '/' + maxTicks;
-            if (tickCount >= maxTicks) endContract();
-          }
+      setTimeout(async () => {
+        if (widget && widget.chart()) {
+          const chart = widget.chart();
+          const analysis = await analyze(symbol);
+          drawSignalOverlay(chart, analysis);
         }
-        if (data.msg_type === 'buy') {
-          contractId = data.buy.contract_id;
-          if (autoTrading) {
-            document.getElementById('contractStatus').innerText = 'Running...';
-            document.getElementById('contractStatus').className = '';
-            tickCount = 0;
-          }
+      }, 5000);
+    }
+
+    async function fetchMarkets() {
+      const res = await fetch('https://api.binance.com/api/v3/ticker/24hr');
+      const data = await res.json();
+      const pairs = data.filter(d => d.symbol.endsWith('USDT'));
+
+      const sortValue = document.getElementById('sortOption').value;
+      if (sortValue === 'change') pairs.sort((a,b) => parseFloat(b.priceChangePercent)-parseFloat(a.priceChangePercent));
+      else if (sortValue === 'volume') pairs.sort((a,b) => parseFloat(b.quoteVolume)-parseFloat(a.quoteVolume));
+
+      const cont = document.getElementById('markets');
+      cont.innerHTML = '';
+      for (const item of pairs) {
+        const change = parseFloat(item.priceChangePercent).toFixed(2);
+        const div = document.createElement('div');
+        div.className = 'market-item';
+        div.innerHTML = `<div style="display:flex;justify-content:space-between;"><span>${item.symbol}</span><span class="${change>=0?'green':'red'}">${change}%</span></div>`;
+        div.onclick = async () => {
+          currentSymbol = item.symbol;
+          updateChart(currentSymbol);
+          updatePrice();
+          const analysis = await analyze(currentSymbol);
+          showSignal(analysis);
+        };
+        cont.appendChild(div);
+      }
+    }
+
+    async function updatePrice() {
+      const res = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${currentSymbol}`);
+      const d = await res.json();
+      const price = parseFloat(d.lastPrice).toFixed(2);
+      const change = parseFloat(d.priceChangePercent).toFixed(2);
+      document.getElementById('symbol').textContent = currentSymbol;
+      const priceEl = document.getElementById('price');
+      priceEl.textContent = `$${price}`;
+      priceEl.className = change>=0?'green':'red';
+    }
+
+    async function analyze(symbol) {
+      const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=15m&limit=100`);
+      const data = await res.json();
+      const closes = data.map(d=>parseFloat(d[4]));
+      const volumes = data.map(d=>parseFloat(d[5]));
+      function calculateRSI(closes, period=14) {
+        let gains=0, losses=0;
+        for (let i=closes.length-period; i<closes.length-1; i++) {
+          const change = closes[i+1]-closes[i];
+          if (change>=0) gains+=change; else losses-=change;
         }
-        if (data.error) alert('❌ Error: ' + data.error.message);
+        const avgGain=gains/period, avgLoss=losses/period;
+        const rs=avgGain/avgLoss||0; return 100-(100/(1+rs));
+      }
+      function calculateMACD(closes, short=12, long=26, signal=9) {
+        function ema(period) {
+          const k=2/(period+1);
+          let ema=closes[0];
+          return closes.map(price=>(ema=price*k+ema*(1-k)));
+        }
+        const emaShort=ema(short), emaLong=ema(long);
+        const macdArr=emaShort.map((v,i)=>v-emaLong[i]);
+        const signalArr=ema(signal);
+        return {macd:macdArr[macdArr.length-1], signal:signalArr[signalArr.length-1]};
+      }
+      function detectPatterns(closes) {
+        if (closes.length<7) return 'None';
+        const [a,b,c,d,e,f,g] = closes.slice(-7);
+        if (b>a && b>c && e>d && e>f && d>b && d>e && d>c) return 'Head & Shoulders';
+        if (Math.abs(b-f)/b<0.02 && b>c && b>d && f>e && f>g) return 'Double Top';
+        return 'None';
+      }
+      function detectDivergence(closes, rsiArr) {
+        const len=closes.length;
+        const lastLow=Math.min(...closes.slice(len-6,len-3));
+        const currentClose=closes[len-1];
+        const lastRsi=Math.min(...rsiArr.slice(-6,-3));
+        const currentRsi=rsiArr[rsiArr.length-1];
+        if (currentClose<lastLow && currentRsi>lastRsi) return 'Bullish Divergence';
+        if (currentClose>lastLow && currentRsi<lastRsi) return 'Bearish Divergence';
+        return 'None';
+      }
+
+      const sma10=closes.slice(-10).reduce((a,b)=>a+b,0)/10;
+      const smaAll=closes.reduce((a,b)=>a+b,0)/closes.length;
+      const direction=sma10>smaAll?'Long':'Short';
+      const entry=closes[closes.length-1];
+      const stopLoss=direction==='Long'? (entry*0.995).toFixed(4): (entry*1.005).toFixed(4);
+      const takeProfit=direction==='Long'? (entry*1.01).toFixed(4): (entry*0.99).toFixed(4);
+      const rsi=calculateRSI(closes).toFixed(2);
+      const macdData=calculateMACD(closes);
+      const macdSignal=macdData.macd>macdData.signal?'Bullish':'Bearish';
+      const rsiArr=[];
+      for (let i=14;i<closes.length;i++){rsiArr.push(calculateRSI(closes.slice(i-14,i+1)));}
+      const divergence=detectDivergence(closes, rsiArr);
+      const pattern=detectPatterns(closes);
+      const avgVol=volumes.slice(-10).reduce((a,b)=>a+b,0)/10;
+      const currentVol=volumes[volumes.length-1];
+      const volStrength=currentVol>avgVol*1.5?'High': currentVol>avgVol*0.8?'Medium':'Low';
+
+      return {
+        pattern, divergence,
+        futures:{ direction, entry:entry.toFixed(4), stopLoss, takeProfit, leverage:20, quality:volStrength, rsi, macdSignal,
+                   combinedStrength:(macdSignal==='Bullish' && rsi>60)?'High':'Medium' },
+        spot:{ direction, entry:entry.toFixed(4), stopLoss:'-', takeProfit:'-', leverage:1, rsi, volume:currentVol.toFixed(0), quality:volStrength, sma10:sma10.toFixed(2), smaAll:smaAll.toFixed(2) }
       };
     }
 
-    function subscribeTicks() {
-      const symbol = document.getElementById('market').value;
-      ws.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
-    }
-
-    function runTrade() {
-      const symbol = document.getElementById('market').value;
-      const amount = parseFloat(document.getElementById('stake').value);
-      maxTicks = parseInt(document.getElementById('duration').value);
-      const type = document.getElementById('tradeType').value;
-      ws.send(JSON.stringify({
-        buy: 1,
-        price: amount,
-        parameters: {
-          amount: amount,
-          basis: "stake",
-          contract_type: type,
-          currency: "USD",
-          duration: maxTicks,
-          duration_unit: "t",
-          symbol: symbol
-        }
-      }));
-    }
-
-    function toggleAutoTrade() {
-      autoTrading = !autoTrading;
-      document.getElementById('autoBtn').innerText = autoTrading ? '⏹ Stop Auto Trade' : '▶️ Start Auto Trade';
-      if (autoTrading) runTrade();
-    }
-
-    function endContract() {
-      if (!autoTrading) return; // skip all behavior if not active
-
-      const win = Math.random() > 0.5;
-      const stake = parseFloat(document.getElementById('stake').value);
-      const payout = win ? stake * 2 : 0;
-
-      document.getElementById('contractStatus').innerText = win ? '✅ Won' : '❌ Lost';
-      document.getElementById('contractStatus').className = win ? 'status-win' : 'status-loss';
-      document.getElementById(win ? 'winSound' : 'loseSound').play();
-
-      totalRuns++;
-      totalStake += stake;
-      totalPayout += payout;
-      if (win) totalWins++; else totalLosses++;
-      profit += win ? stake : -stake;
-
-      document.getElementById('totalRuns').innerText = totalRuns;
-      document.getElementById('wins').innerText = totalWins;
-      document.getElementById('losses').innerText = totalLosses;
-      document.getElementById('totalStake').innerText = totalStake.toFixed(2);
-      document.getElementById('totalPayout').innerText = totalPayout.toFixed(2);
-      document.getElementById('pnl').innerText = (totalPayout - totalStake).toFixed(2);
-
-      const li = document.createElement('li');
-      li.textContent = (win ? '✅ Won' : '❌ Lost') + ' | Total Profit: ' + profit.toFixed(2);
-      document.getElementById('history').prepend(li);
-
-      const sl = parseFloat(document.getElementById('stopLoss').value);
-      const tp = parseFloat(document.getElementById('takeProfit').value);
-      if (profit >= tp || profit <= sl) {
-        autoTrading = false;
-        alert(profit >= tp ? '🎯 Take Profit reached!' : '🛑 Stop Loss reached!');
-      } else {
-        setTimeout(runTrade, 2000);
-      }
-
-      ws.send(JSON.stringify({ balance: 1 }));
-    }
-
-    function updateChart() {
-      if (!chart) {
-        const ctx = document.getElementById('tickChart').getContext('2d');
-        chart = new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: ticks.map((_, i) => i + 1),
-            datasets: [{
-              label: 'Tick Price',
-              data: ticks,
-              borderWidth: 2,
-              fill: false
-            }]
-          },
-          options: {
-            responsive: true,
-            scales: { y: { beginAtZero: false } }
-          }
-        });
-      } else {
-        chart.data.labels = ticks.map((_, i) => i + 1);
-        chart.data.datasets[0].data = ticks;
-        chart.update();
+    function drawSignalOverlay(chart, analysis) {
+      const now = Math.floor(Date.now()/1000);
+      const entry = parseFloat(analysis.futures.entry);
+      const direction = analysis.futures.direction;
+      const pattern = analysis.pattern;
+      const divergence = analysis.divergence;
+      chart.createShape({ time: now, price: entry, shape: direction==='Long'?'arrow_up':'arrow_down', text: `${direction} Entry`, color: direction==='Long'?`#00e676`:'#ff1744', textColor:'#000', disableSelection:true, disableSave:true, lock:true });
+      if(pattern!=='None' || divergence!=='None'){
+        chart.createShape({ time: now, price: entry, shape:'label', text:`${pattern!=='None'?pattern:''}${divergence!=='None'?' | '+divergence:''}`, color:'#fcd535', textColor:'#000', disableSelection:true, disableSave:true, lock:true });
       }
     }
 
-    function updateIndicators() {
-      if (ticks.length < 6) return;
-      const ma = ticks.slice(-5).reduce((a, b) => a + b, 0) / 5;
-      const gains = [], losses = [];
-      for (let i = ticks.length - 5; i < ticks.length - 1; i++) {
-        const diff = ticks[i + 1] - ticks[i];
-        if (diff >= 0) gains.push(diff); else losses.push(Math.abs(diff));
+    function renderHistory() {
+      const cont = document.getElementById('signalHistory');
+      if(historyArr.length===0) {
+        cont.innerHTML = '<p>No history yet.</p>';
+        return;
       }
-      const avgGain = gains.reduce((a, b) => a + b, 0) / gains.length || 0.01;
-      const avgLoss = losses.reduce((a, b) => a + b, 0) / losses.length || 0.01;
-      const rs = avgGain / avgLoss;
-      const rsi = 100 - (100 / (1 + rs));
-      document.getElementById('ma').innerText = ma.toFixed(2);
-      document.getElementById('rsi').innerText = rsi.toFixed(1);
+      cont.innerHTML = historyArr.map(entry => `
+        <div class="history-entry">
+          <h5>${entry.time} | ${entry.symbol} | ${entry.type}</h5>
+          <p>Entry: $${entry.entry}</p>
+          <p>SL: $${entry.stopLoss} | TP: $${entry.takeProfit}</p>
+        </div>
+      `).join('');
     }
+
+    function showSignal(data) {
+      const classMap = { Low: 'signal-low', Medium: 'signal-medium', High: 'signal-high' };
+      // display current
+      document.getElementById('tradeDetails').innerHTML = `
+        <div class="trade-card">
+          <div class="signal-strength ${classMap[data.futures.quality]}">${data.futures.quality} Signal</div>
+          <h4>${data.futures.direction==='Long'?'📈':'📉'} ${currentSymbol} | Futures</h4>
+          <p>Entry: $${data.futures.entry}</p>
+          <p>Stop Loss: $${data.futures.stopLoss}</p>
+          <p>Take Profit: $${data.futures.takeProfit}</p>
+          <p>Leverage: ${data.futures.leverage}x</p>
+          <hr><p>📊 RSI: ${data.futures.rsi}</p>
+          <p>📉 MACD: ${data.futures.macdSignal}</p>
+          <p>🔄 Divergence: ${data.divergence}</p>
+          <p>📐 Pattern: ${data.pattern}</p>
+          <p>🔥 Strength: <span class="${classMap[data.futures.combinedStrength]}">${data.futures.combinedStrength}</span></p>
+        </div>`;
+      document.getElementById('spotDetails').innerHTML = `<div class="trade-card">
+          <div class="signal-strength ${classMap[data.spot.quality]}">${data.spot.quality} Volume</div>
+          <h4>${data.spot.direction==='Long'?'📈':'📉'} ${currentSymbol} | Spot</h4>
+          <p>Entry: $${data.spot.entry}</p>
+          <p>Volume: ${data.spot.volume}</p>
+          <p>SMA10: ${data.spot.sma10}</p>
+          <p>SMA100: ${data.spot.smaAll}</p>
+          <hr><p>📊 RSI: ${data.spot.rsi}</p>
+          <p>Leverage: ${data.spot.leverage}x</p>
+        </div>`;
+      // add to history
+      const nowStr = new Date().toLocaleString();
+      historyArr.unshift({ time: nowStr, symbol: currentSymbol, type: 'Futures', entry: data.futures.entry, stopLoss: data.futures.stopLoss, takeProfit: data.futures.takeProfit });
+      if(historyArr.length>10) historyArr.pop();
+      renderHistory();
+    }
+
+    document.getElementById('marketSearch').addEventListener('input', e => {
+      const filter = e.target.value.toUpperCase();
+      document.querySelectorAll('.market-item').forEach(item => {
+        item.style.display = item.textContent.toUpperCase().includes(filter) ? '' : 'none';
+      });
+    });
+    document.getElementById('sortOption').addEventListener('change', fetchMarkets);
+
+    fetchMarkets();
+    updateChart(currentSymbol);
+    updatePrice();
+    setInterval(updatePrice, 5000);
   </script>
 </body>
 </html>
